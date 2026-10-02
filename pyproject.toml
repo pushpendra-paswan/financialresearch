@@ -1,0 +1,23 @@
+# Tool configuration only. Dependencies live in requirements*.txt.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Markdown files are excluded because ruff 0.16 would also reformat the code examples in CLAUDE.md
+exclude = ["alembic/versions"]
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+# FastAPI's Depends(...) in argument defaults is the normal pattern, not a bug
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+# tests/conftest.py must set DATABASE_URL before it imports the app, so its imports are not at the top
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -3,7 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Values come from environment variables, or from the .env file if present.
-    # The .env file also holds POSTGRES_* variables used only by docker compose, so extras are ignored.
+    # The .env file also holds POSTGRES_* variables used only by docker compose,
+    # so extras are ignored.
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     APP_NAME: str = "Financial Research Copilot"

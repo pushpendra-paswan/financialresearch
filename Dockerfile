@@ -5,9 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install dependencies first so this layer is cached until requirements.txt changes
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies first so this layer is cached until the requirements files change.
+# Dev-only project for now, so one image includes the test and lint tools
+# (requirements-dev.txt starts with "-r requirements.txt")
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 COPY . .
 

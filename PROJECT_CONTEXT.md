@@ -1,9 +1,9 @@
 # PROJECT_CONTEXT.md
 
 ## Current status
-- Current phase: Phase 0 (Foundation)
-- Last completed milestone: 0.2 Local infrastructure
-- Next milestone: 0.3 Quality setup (pytest with a test database, ruff, GitHub Actions)
+- Current phase: Phase 1 (Traditional backend)
+- Last completed milestone: 0.3 Quality setup (Phase 0 is complete)
+- Next milestone: 1.1 Auth and multi-tenancy
 
 ## How to run
 - Create local settings: `cp .env.example .env`
@@ -14,7 +14,10 @@
 - psql shell: `docker compose exec db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'`
 - Reset the database (deletes all data): `docker compose down -v`, then start and migrate again
 - Code changes under the project folder reload the API automatically. The worker does not reload: use `docker compose restart worker`
-- Run tests: not set up yet (milestone 0.3)
+- Run tests: `docker compose exec api pytest` (needs the stack running; creates the `fincopilot_test` database on first run and reuses it afterwards)
+- Lint: `docker compose exec api ruff check .` (add `--fix` to apply safe fixes)
+- Format: `docker compose exec api ruff format .` (check only: `ruff format --check .`)
+- CI: `.github/workflows/ci.yml` runs `ruff check .`, `ruff format --check .` and `pytest` on pushes to `main`/`master` and on all pull requests
 - Seed / backfill commands: None yet
 
 ## Environment variables
@@ -28,11 +31,12 @@
 | POSTGRES_DB | Postgres database name. Read only by docker compose |
 | DATABASE_URL | SQLAlchemy URL, psycopg v3 driver: `postgresql+psycopg://user:password@db:5432/dbname`. Required, no default |
 | REDIS_URL | Redis URL, used as Celery broker and result backend and by the readiness check: `redis://redis:6379/0`. Required, no default |
+| TEST_DATABASE_URL | Used only by pytest (`tests/conftest.py`), not part of `Settings`. Same format as `DATABASE_URL`, but the database name must end with `_test` (`fincopilot_test`). Replaces `DATABASE_URL` during tests. Required to run tests |
 
 ## Database tables
 | Table | Purpose | Key columns / constraints | Added in |
 |-------|---------|---------------------------|----------|
-| None yet | Only the `vector` (pgvector) extension is enabled, plus Alembic's own `alembic_version` table | | 0.2 |
+| None yet | Only the `vector` (pgvector) extension is enabled, plus Alembic's own `alembic_version` table. The `fincopilot_test` database has the same schema, created by the tests | | 0.2 |
 
 ## API endpoints
 | Method | Path | Purpose | Auth / role |
@@ -54,15 +58,20 @@
 - `app/routes/health.py` — `GET /health` and `GET /health/ready`
 - `app/workers/celery_app.py` — the Celery app (`celery_app`), Redis broker and result backend
 - `app/models/__init__.py` — empty. Convention: every new model file is imported here so Alembic sees it
+- `pyproject.toml` — tool config only: ruff (line length 100, py312, rules E/F/I/B/UP, excludes `alembic/versions` and `*.md`, `fastapi.Depends` treated as immutable for B008, E402 allowed in `tests/conftest.py`) and pytest (`testpaths`, `pythonpath`)
+- `requirements-dev.txt` — `-r requirements.txt` plus pinned pytest, httpx (for `TestClient`) and ruff
+- `tests/conftest.py` — sets `DATABASE_URL` from `TEST_DATABASE_URL` before the app is imported, the `_test` name guard, session fixture that creates the test database and runs `alembic upgrade head`, and the `db` and `client` fixtures
+- `tests/test_health.py`, `tests/test_exceptions.py`, `tests/test_database.py` — health endpoints, exception handlers (404 and 409 via throwaway routes), pgvector extension exists
+- `.github/workflows/ci.yml` — CI: one job with pgvector/Postgres and Redis service containers; lint, format check, pytest
 - `alembic.ini` — Alembic config (no database URL in it)
 - `alembic/env.py` — reads the URL from `settings.DATABASE_URL`, uses `Base.metadata`, imports `app.models`
 - `alembic/versions/69068f636609_enable_pgvector_extension.py` — first migration, `CREATE EXTENSION IF NOT EXISTS vector`
-- `Dockerfile`, `.dockerignore` — one `python:3.12-slim` image used by api and worker
+- `Dockerfile`, `.dockerignore` — one `python:3.12-slim` image used by api and worker; installs `requirements-dev.txt`
 - `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker`; named volume `postgres_data`
 - `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis)
-- `.env.example` — template for `.env` (`.env` is git-ignored)
+- `.env.example` — template for `.env` (`.env` is git-ignored); includes `TEST_DATABASE_URL`
 - Empty packages (only `__init__.py`): `app/schemas`, `app/repositories`, `app/services`, `app/clients`
-- Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`, `tests/`
+- Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`
 
 ## Design decisions
 - The repository root is the project root (no `fin-copilot/` subfolder) — the repo was created in this directory (0.1)
@@ -79,12 +88,21 @@
 - `DATABASE_URL` and `REDIS_URL` have no defaults, so URLs are never hard-coded; the app will not start without a `.env` or real environment variables (0.2)
 - `/health/ready` checks the database and Redis separately and reports each, with a 2s Redis timeout so a stopped Redis returns 503 quickly (0.2)
 - `SessionLocal` uses `autoflush=False, expire_on_commit=False`, so objects stay readable after the service commits and returns them (0.2)
+- Tests run against a real Postgres database (`fincopilot_test`), never SQLite, because the app uses pgvector and Postgres full-text search (0.3)
+- `tests/conftest.py` replaces `DATABASE_URL` with `TEST_DATABASE_URL` before importing the app, and aborts the run unless the database name ends with `_test`. The app, Alembic and the tests therefore cannot touch the development database. `TEST_DATABASE_URL` is deliberately not in `Settings` (0.3)
+- The test database is created once and reused; the schema comes from `alembic upgrade head` (so migrations are tested too). Nothing is dropped between runs (0.3)
+- Each test runs inside an outer transaction that is rolled back at the end; the `Session` uses `join_transaction_mode="create_savepoint"`, so service `db.commit()` calls only release a savepoint and nothing persists between tests (0.3)
+- Dev dependencies (pytest, httpx, ruff) are installed in the shared Docker image, since this is a dev-only project for now. Split into separate images if the project is ever deployed (0.3)
+- Ruff rules are E, F, I, B, UP. B008 is handled with `extend-immutable-calls = ["fastapi.Depends"]` instead of being disabled. `*.md` is excluded because ruff 0.16 also formats code blocks in Markdown and would rewrite `CLAUDE.md` (0.3)
+- CI uses GitHub Actions service containers (`pgvector/pgvector:pg16`, `redis:7-alpine`) with throwaway credentials, and sets the environment variables at job level instead of using a `.env` file (0.3)
 
 ## Known issues and tech debt
-- No pytest yet, so exception handlers and `/health/ready` were verified by hand (until 0.3).
-- No ruff config yet. A default `ruff check` flags `B008` on `Depends(get_db)` in `app/routes/health.py`; this is the normal FastAPI pattern, so decide in 0.3 whether to ignore it in the ruff config.
-- Alembic's generated `script.py.mako` template still uses `Union[...]` typing; new migrations may need `ruff --fix` once the ruff config exists.
+- The `db` fixture's rollback isolation has no test yet, because no table exists. Its first real test (a write that does not leak into the next test, and a service `commit()` that is rolled back) goes in 1.1 with the first table.
+- Starlette's `TestClient` warns that using it with `httpx` is deprecated and suggests `httpx2`. We follow the milestone spec (httpx); revisit when Starlette actually removes httpx support.
+- Alembic's generated `script.py.mako` template still uses `Union[...]` typing. Ruff skips `alembic/versions`, so no lint failure, but new migrations keep the old style.
+- `alembic/env.py` calls `fileConfig`, which can disable existing loggers in the test process when `alembic upgrade` runs. Nothing depends on captured app logs yet; keep in mind if a test needs `caplog`.
 
 ## Milestone log
 - 0.1 (2026-10-02): Folder structure, FastAPI app with config, logging and exception handlers, `GET /health`, pinned requirements, `.env.example`, `.gitignore`, this file.
 - 0.2 (2026-10-02): Dockerfile and docker-compose (db with pgvector, redis, api, worker), SQLAlchemy engine/session/Base and `get_db`, Alembic with a hand-written pgvector-extension migration, Celery app (no tasks), `GET /health/ready`.
+- 0.3 (2026-10-02): pytest against a real Postgres test database (`fincopilot_test`, safety guard, savepoint rollback per test, `db` and `client` fixtures), 5 tests, ruff config (E/F/I/B/UP), `requirements-dev.txt` installed in the Docker image, GitHub Actions workflow with Postgres and Redis service containers.
