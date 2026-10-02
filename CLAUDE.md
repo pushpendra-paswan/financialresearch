@@ -122,6 +122,7 @@ fin-copilot/
 │   ├── database.py        # Engine and session
 │   ├── dependencies.py    # get_db, get_current_user, role checks
 │   ├── exceptions.py      # Custom exceptions (NotFoundError, ConflictError, ...)
+│   ├── security.py        # Password hashing and JWT create/decode
 │   ├── models/            # SQLAlchemy models, one file per domain
 │   ├── schemas/           # Pydantic request/response schemas, one file per domain
 │   ├── repositories/      # Database queries only, one file per domain
@@ -137,7 +138,7 @@ fin-copilot/
 └── tests/
 ```
 
-Domains (use these names consistently across layers): `auth`, `organizations`, `companies`, `watchlists`, `filings`, `financials`, `prices`, `alerts`, `ingestion`, `audit`, `chunks`, `retrieval`, `chat`, `reports`, `agent`.
+Domains (use these names consistently across layers): `auth`, `organizations`, `users`, `companies`, `watchlists`, `filings`, `financials`, `prices`, `alerts`, `ingestion`, `audit`, `chunks`, `retrieval`, `chat`, `reports`, `agent`.
 
 ### Layer rules
 

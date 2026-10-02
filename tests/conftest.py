@@ -1,5 +1,5 @@
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 
 import pytest
 from sqlalchemy import create_engine, text
@@ -84,3 +84,22 @@ def client(db: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def register_org(client: TestClient) -> Callable[[str, str], dict[str, str]]:
+    # Registers a new organization through the API and returns the admin's auth headers,
+    # so tests can set up several organizations in one line each
+    def register(organization_name: str, email: str) -> dict[str, str]:
+        response = client.post(
+            "/auth/register",
+            json={
+                "organization_name": organization_name,
+                "email": email,
+                "password": "correct-horse-battery",
+            },
+        )
+        assert response.status_code == 201
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    return register

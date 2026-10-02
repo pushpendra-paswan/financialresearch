@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
+    # JWT settings. The secret has no default on purpose: generate one with `openssl rand -hex 32`
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str
     REDIS_URL: str
