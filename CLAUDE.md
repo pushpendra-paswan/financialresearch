@@ -139,7 +139,7 @@ fin-copilot/
 └── tests/
 ```
 
-Domains (use these names consistently across layers): `auth`, `organizations`, `users`, `companies`, `watchlists`, `filings`, `financials`, `prices`, `alerts`, `ingestion`, `audit`, `chunks`, `retrieval`, `chat`, `reports`, `agent`.
+Domains (use these names consistently across layers): `auth`, `organizations`, `users`, `companies`, `watchlists`, `filings`, `financials`, `prices`, `alerts`, `notifications`, `ingestion`, `audit`, `chunks`, `retrieval`, `chat`, `reports`, `agent`.
 
 ### Layer rules
 
@@ -173,7 +173,7 @@ Shared public data (no `org_id`; every organization reads the same rows):
 Private organization data (every table has `org_id`):
 - `organizations`, `users` (org_id, email, role: admin / analyst / viewer)
 - `watchlists` (org_id, created_by, name; name unique per organization, case-insensitive), `watchlist_items` (primary key is watchlist_id + company_id; deleting a watchlist cascades to its items)
-- `alerts` (user_id, company_id, condition, active), `notifications` (alert_id, sent_at, is_read)
+- `alerts` (org_id, user_id = owner, company_id, alert_type price_above/price_below/daily_change_pct, threshold, active, watch_from = first day the alert may fire), `notifications` (org_id, user_id, alert_id with ON DELETE CASCADE, company_id, trade_date, trigger_value, message, is_read, created_at; unique on alert_id + trade_date)
 - `audit_logs` (org_id, user_id, action, entity_id)
 - `chat_sessions`, `chat_messages`, `citations` (message_id, chunk_id, score)
 - `agent_runs` (message_id, status, step_count), `tool_calls` (run_id, tool_name, input, output, approval_status)
@@ -190,6 +190,7 @@ Tables are created only in the milestone that needs them.
 - Accessing another organization's resource returns 404 (not 403), so existence is not leaked.
 - Every org-owned feature has a test proving organization A cannot see organization B's data.
 - Roles: viewers are read-only on organization data; admin and analyst can create and change it (the `require_editor` dependency); managing users is admin-only.
+- Alerts and notifications are personal: besides org_id, every query also filters by the owning user_id, and another user's alert or notification returns 404 even inside the same organization. Any role, including viewer, can manage their own alerts. The evaluation job's list_active is the only org-less alert query.
 - Agent tools enforce `org_id` the same way.
 
 ### External data
@@ -259,7 +260,7 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: an endpoint returns a company's yearly revenue for the last 5 years.
 - **1.6 Prices**: `PriceProvider` interface with one implementation (yfinance), price_bars table, a daily job that re-syncs the full lookback window (the first run is the backfill).
   Done when: price history is returned, and swapping providers needs only a new class.
-- **1.7 Alerts and notifications**: alert CRUD, evaluation job after the daily price job, notifications.
+- **1.7 Alerts and notifications**: alert CRUD (personal alerts), an evaluation job chained after the daily price job, in-app notifications.
   Done when: a test with fixture prices triggers exactly one notification.
 - **1.8 Hardening and frontend**: Redis caching for company and price reads, API rate limiting, consistent error responses, frontend pages (login, watchlists, company page with chart and filings, notifications).
   Done when: the full Phase 1 flow works in the browser.

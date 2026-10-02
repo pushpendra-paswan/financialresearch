@@ -134,3 +134,34 @@ def seeded(db: Session, monkeypatch: pytest.MonkeyPatch, sec_rows: list[dict]) -
     # from the fixture file that tests use.
     monkeypatch.setattr(sec, "get_company_tickers", lambda: sec_rows)
     company_service.seed_companies(db, ["AAPL", "MSFT", "MA", "V", "AMZN", "GOOGL", "JNJ"])
+
+
+@pytest.fixture
+def people(
+    client: TestClient, seeded: None, register_org: Callable[[str, str], dict[str, str]]
+) -> dict[str, dict]:
+    # The users the alert and notification tests need, each as {"headers", "org_id", "user_id"}:
+    #   admin, analyst, viewer: three roles of organization "Acme"
+    #   colleague: a second analyst of Acme (same organization, a different person)
+    #   outsider: the admin of another organization, "Globex"
+    password = "correct-horse-battery"
+    admin_headers = register_org("Acme", "admin@acme.com")
+    outsider_headers = register_org("Globex", "admin@globex.com")
+    headers_by_name = {"admin": admin_headers, "outsider": outsider_headers}
+
+    for name, role in [("analyst", "analyst"), ("viewer", "viewer"), ("colleague", "analyst")]:
+        email = f"{name}@acme.com"
+        created = client.post(
+            "/users",
+            json={"email": email, "password": password, "role": role},
+            headers=admin_headers,
+        )
+        assert created.status_code == 201
+        login = client.post("/auth/login", json={"email": email, "password": password})
+        headers_by_name[name] = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    result = {}
+    for name, headers in headers_by_name.items():
+        me = client.get("/auth/me", headers=headers).json()
+        result[name] = {"headers": headers, "org_id": me["org_id"], "user_id": me["id"]}
+    return result

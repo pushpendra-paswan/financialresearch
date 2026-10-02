@@ -2,6 +2,7 @@ import logging
 
 from app.database import SessionLocal
 from app.exceptions import ConflictError
+from app.services import alerts as alert_service
 from app.services import financials as financial_service
 from app.services import ingestion as ingestion_service
 from app.services import prices as price_service
@@ -53,11 +54,34 @@ def ingest_prices() -> str | None:
     try:
         run = price_service.ingest_prices(db)
     except ConflictError as error:
-        # A skipped run is not a failure
+        # A skipped run is not a failure, and there are no new prices to evaluate
         logger.warning("Price ingestion skipped: %s", error.message)
         return None
     finally:
         db.close()
 
     logger.info("Price ingestion run %d finished (%s): %s", run.id, run.status, run.message)
+
+    # Chain the alert evaluation: it runs after this task, because the worker has one process
+    # (--concurrency=1). Only reached when the service returned normally (success or partial).
+    # If this chain is ever lost, the next day's run catches up
+    evaluate_alerts.delay()
+    return f"{run.status}: {run.message}"
+
+
+# No Celery retries: the next evaluation catches up. It has no beat entry: it is chained after
+# ingest_prices
+@celery_app.task(name="evaluate_alerts")
+def evaluate_alerts() -> str | None:
+    db = SessionLocal()
+    try:
+        run = alert_service.evaluate_alerts(db)
+    except ConflictError as error:
+        # A skipped run is not a failure
+        logger.warning("Alert evaluation skipped: %s", error.message)
+        return None
+    finally:
+        db.close()
+
+    logger.info("Alert evaluation run %d finished (%s): %s", run.id, run.status, run.message)
     return f"{run.status}: {run.message}"
