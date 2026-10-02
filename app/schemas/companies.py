@@ -11,6 +11,7 @@ class CompanyResponse(BaseModel):
     cik: str
     name: str
     exchange: str | None
+    industry: str | None
     created_at: datetime
 
 

@@ -1,0 +1,68 @@
+{
+  "cik": "0000320193",
+  "entityType": "operating",
+  "sic": "3571",
+  "sicDescription": "Electronic Computers",
+  "name": "Apple Inc.",
+  "tickers": [
+    "AAPL"
+  ],
+  "exchanges": [
+    "Nasdaq"
+  ],
+  "fiscalYearEnd": "0926",
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "0001140361-26-038307",
+        "0000320193-26-000020",
+        "0000320193-26-000010",
+        "0000320193-25-000079"
+      ],
+      "filingDate": [
+        "2026-10-01",
+        "2026-07-31",
+        "2026-05-01",
+        "2025-10-31"
+      ],
+      "reportDate": [
+        "2026-09-29",
+        "2026-06-27",
+        "",
+        "2025-09-27"
+      ],
+      "acceptanceDateTime": [
+        "2026-10-01T18:00:00.000Z",
+        "2026-07-31T06:01:00.000Z",
+        "2026-05-01T06:01:00.000Z",
+        "2025-10-31T06:01:00.000Z"
+      ],
+      "form": [
+        "4",
+        "10-Q",
+        "8-K",
+        "10-K"
+      ],
+      "primaryDocument": [
+        "xslF345X06/form4.xml",
+        "aapl-20260627.htm",
+        "aapl-20260501.htm",
+        "aapl-20250927.htm"
+      ],
+      "primaryDocDescription": [
+        "FORM 4",
+        "10-Q",
+        "8-K",
+        "10-K"
+      ]
+    },
+    "files": [
+      {
+        "name": "CIK0000320193-submissions-001.json",
+        "filingCount": 1256,
+        "filingFrom": "1994-01-26",
+        "filingTo": "2015-08-23"
+      }
+    ]
+  }
+}

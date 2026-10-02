@@ -2,22 +2,23 @@
 
 ## Current status
 - Current phase: Phase 1 (Traditional backend)
-- Last completed milestone: 1.3 Watchlists
-- Next milestone: 1.4 SEC client and filing ingestion
+- Last completed milestone: 1.4 SEC client and filing ingestion
+- Next milestone: 1.5 Financial facts
 
 ## How to run
 - Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`) and `SEC_USER_AGENT` (`FinCopilot your.name@example.com`, a real contact email). The app and the tests will not start without them. After changing `.env`, run `docker compose up -d` so the containers pick it up
-- Start services: `docker compose up --build` (db, redis, api on port 8000, worker; add `-d` to run in the background)
+- Start services: `docker compose up --build` (db, redis, api on port 8000, worker, beat; add `-d` to run in the background)
 - Run migrations: `docker compose exec api alembic upgrade head` (roll back one step: `docker compose exec api alembic downgrade -1`)
 - Check it: `curl localhost:8000/health` returns `{"status":"ok"}`; `curl localhost:8000/health/ready` checks database and Redis
 - Check the worker: `docker compose exec worker celery -A app.workers.celery_app inspect ping`
 - psql shell: `docker compose exec db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'`
 - Reset the database (deletes all data): `docker compose down -v`, then start and migrate again
-- Code changes under the project folder reload the API automatically. The worker does not reload: use `docker compose restart worker`
+- Code changes under the project folder reload the API automatically. The worker and beat do NOT reload: after changing task code, the schedule or `docker-compose.yml`, run `docker compose up -d --build` (or `docker compose restart worker beat` for code-only changes)
 - Run tests: `docker compose exec api pytest` (needs the stack running; creates the `fincopilot_test` database on first run and reuses it afterwards)
 - Lint: `docker compose exec api ruff check .` (add `--fix` to apply safe fixes)
 - Format: `docker compose exec api ruff format .` (check only: `ruff format --check .`)
 - CI: `.github/workflows/ci.yml` runs `ruff check .`, `ruff format --check .` and `pytest` on pushes to `main`/`master` and on all pull requests
+- Filing ingestion by hand: `docker compose exec api python -m scripts.run_filing_ingestion` (prints the run's status and message; exits 1 if a run is already in progress). First run for the 34 companies: about 3.5 minutes, 397 filings, about 1.4 GB. A repeat run takes about 50 seconds and stores nothing. Through Celery: `docker compose exec api python -c "from app.workers.tasks import ingest_filings; print(ingest_filings.delay().id)"`, then `docker compose logs worker`. Run it after the seed, because it fills `companies.industry` and `filings`
 - Seed / backfill commands: `docker compose exec api python -m scripts.seed_companies` (downloads the SEC ticker file and loads the 34 tickers listed in the script; safe to run repeatedly. Exits with status 1 and writes nothing if a ticker is missing from the SEC data or two tickers share a CIK)
 - Seeded tickers (the `TICKERS` list in `scripts/seed_companies.py`): AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, AMD, INTC, ORCL, CRM, ADBE, JPM, BAC, GS, MS, WFC, V, MA, JNJ, PFE, UNH, LLY, MRK, XOM, CVX, WMT, KO, PEP, MCD, NKE, DIS, BA, CAT
 
@@ -37,6 +38,7 @@
 | ACCESS_TOKEN_EXPIRE_MINUTES | Lifetime of an access token in minutes. Default 60 |
 | SEC_USER_AGENT | Sent as the `User-Agent` on every SEC request. Required, no default. Must identify you with a real contact email, in the form `FinCopilot your.name@example.com` |
 | RAW_DATA_DIR | Folder for raw downloaded files, relative to the project root. Default `data/raw` |
+| FILINGS_LOOKBACK_YEARS | Filing ingestion stores only filings filed within this many years (cutoff = today minus 365 days per year). Default 3 |
 | TEST_DATABASE_URL | Used only by pytest (`tests/conftest.py`), not part of `Settings`. Same format as `DATABASE_URL`, but the database name must end with `_test` (`fincopilot_test`). Replaces `DATABASE_URL` during tests. Required to run tests |
 
 ## Database tables
@@ -45,9 +47,11 @@
 | organizations | A tenant (a team) | `id` (identity), `name`, `created_at` | 1.1 |
 | users | Members of an organization | `id`, `org_id` (FK, indexed), `email` (unique, lowercase), `hashed_password`, `role` (string, CHECK `ck_users_role` in admin/analyst/viewer), `created_at` | 1.1 |
 | audit_logs | Who did what | `id`, `org_id` (FK, indexed), `user_id` (FK), `action` (e.g. `user.create`), `entity_id` (nullable), `created_at` | 1.1 |
-| companies | Shared public catalog of US-listed companies (no `org_id`) | `id` (identity), `ticker` (unique), `cik` (unique, 10-character zero-padded string, e.g. `0000320193`), `name`, `exchange` (nullable), `created_at`. No extra indexes: the unique constraints are enough for ~34 rows. Sector arrives in 1.4 | 1.2 |
+| companies | Shared public catalog of US-listed companies (no `org_id`) | `id` (identity), `ticker` (unique), `cik` (unique, 10-character zero-padded string, e.g. `0000320193`), `name`, `exchange` (nullable), `industry` (nullable, the SEC's SIC description such as "Electronic Computers"; filled by the filing ingestion, added in 1.4), `created_at`. No extra indexes: the unique constraints are enough for ~34 rows | 1.2 (industry 1.4) |
 | watchlists | A named list of companies a team tracks (private, shared by the whole organization) | `id` (identity), `org_id` (FK, indexed), `created_by` (FK to users), `name` (100), `created_at`. UNIQUE INDEX `uq_watchlists_org_id_lower_name` on `(org_id, lower(name))`, so names are unique per organization ignoring letter case | 1.3 |
 | watchlist_items | A company in a watchlist | PRIMARY KEY `(watchlist_id, company_id)` (no id column, no other indexes), `watchlist_id` FK with `ON DELETE CASCADE`, `company_id` FK to companies with no cascade, `added_at` | 1.3 |
+| filings | 10-K and 10-Q filings of the catalog companies (shared public data, no `org_id`) | `id` (identity), `company_id` (FK, not null), `accession_number` (unique, dashed form e.g. `0000320193-24-000123`), `form_type` (`10-K` or `10-Q`), `filed_on` (date), `report_date` (date, nullable), `fiscal_year` (nullable, year of `report_date`), `primary_document` (the main file name), `raw_path` (nullable; the downloaded file's path RELATIVE to `RAW_DATA_DIR`, null until downloaded), `created_at`. Index `ix_filings_company_id_filed_on` on `(company_id, filed_on)` | 1.4 |
+| ingestion_runs | One row per run of a scheduled job (system data, no `org_id`) | `id` (identity), `job_type` (`ingest_filings`), `status` (string, CHECK `ck_ingestion_runs_status` in running/success/partial/failed; Python enum `IngestionStatus`), `started_at`, `finished_at` (nullable), `message` (counts summary), `error` (set only when the run failed) | 1.4 |
 
 The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_version` table. The `fincopilot_test` database has the same schema, created by the tests. All `created_at` columns are `timestamptz` with server default `now()`.
 
@@ -63,7 +67,8 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | GET | /users | Lists users of the caller's organization (no pagination) | Any logged-in user |
 | GET | /users/{user_id} | One user of the caller's organization. 404 "User not found" if missing or in another organization | Any logged-in user |
 | GET | /companies | Paginated company list. Query: `search` (max 50 chars; literal, case-insensitive substring match on ticker or name; exact ticker match first, then by ticker), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`. 422 for invalid values | Any logged-in user |
-| GET | /companies/{ticker} | One company by ticker (case-insensitive). 404 "Company not found" if unknown | Any logged-in user |
+| GET | /companies/{ticker} | One company by ticker (case-insensitive), now including `industry`. 404 "Company not found" if unknown | Any logged-in user |
+| GET | /companies/{ticker}/filings | A company's stored 10-K and 10-Q filings, newest `filed_on` first. Query: `form_type` (optional, exactly `10-K` or `10-Q`, else 422), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`; each item has `id, accession_number, form_type, filed_on, report_date, fiscal_year, primary_document, document_downloaded` (`raw_path` is not exposed). 404 "Company not found" for an unknown ticker (case-insensitive) | Any logged-in user |
 | POST | /watchlists | Creates a watchlist `{name}` (stripped, 1-100 characters). 201 with `{id, name, created_by, created_at, item_count}`. 409 if the name exists in the organization (any letter case) | Admin or analyst |
 | GET | /watchlists | The organization's watchlists with `item_count`, ordered by name ignoring case. No pagination | Any logged-in user |
 | GET | /watchlists/{watchlist_id} | One watchlist with its `companies` (full company objects, sorted by ticker). 404 "Watchlist not found" if missing or in another organization | Any logged-in user |
@@ -77,7 +82,9 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 ## Background jobs
 | Task | Schedule | What it does |
 |------|----------|--------------|
-| None yet | | The Celery app exists and the worker runs, but there are no tasks. Beat comes in 1.4 |
+| `ingest_filings` (`app/workers/tasks.py`) | Daily at 02:00 UTC (Celery beat, entry `ingest-filings-daily`) | Calls `services.ingestion.ingest_filings`: for every company fetches the SEC submissions, stores new 10-K/10-Q filings and downloads their main documents, and records an `ingestion_runs` row. No Celery retries. A run that is skipped because another is in progress is logged as a warning, not a failure |
+
+Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC throttle is global) and `beat` sends the schedule (`--schedule /tmp/celerybeat-schedule`, git-ignored as `celerybeat-schedule*`).
 
 ## Key files
 - `app/main.py` — FastAPI app, logging setup, router registration, exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403)
@@ -92,12 +99,16 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `app/services/auth.py` (`register`, `login`) and `users.py` (`create_user`, `list_users`, `get_user`) — business logic, own the commits
 - `app/routes/auth.py`, `users.py` — the 1.1 endpoints
 - `app/routes/health.py` — `GET /health` and `GET /health/ready`
-- `app/clients/sec.py` — `get_company_tickers()`: downloads the SEC ticker file, saves the raw response to `<RAW_DATA_DIR>/sec/company_tickers_exchange.json`, returns dicts with `cik` (padded), `ticker`, `name`, `exchange`. The first external client
+- `app/clients/sec.py` — the SEC client. `sec_get(url, timeout)` is the only function that calls httpx (throttle, User-Agent, retries). `get_company_tickers()` saves the ticker file to `<RAW_DATA_DIR>/sec/company_tickers_exchange.json` and returns dicts with `cik` (padded), `ticker`, `name`, `exchange`. `get_submissions(cik, page_name=None)` saves the raw JSON to `<RAW_DATA_DIR>/sec/submissions/CIK<cik>.json` (or `<page_name>` for an older page) and returns the parsed dict. `download_filing_document(cik, accession_number, primary_document)` saves to `<RAW_DATA_DIR>/sec/filings/<padded cik>/<accession>/<document>` and returns the path relative to `RAW_DATA_DIR`
 - `app/schemas/companies.py`, `app/repositories/companies.py` (`get_by_ticker`, `get_by_cik`, `create`, `search_companies`), `app/services/companies.py` (`list_companies`, `get_company`, `seed_companies`), `app/routes/companies.py` — the 1.2 catalog
 - `scripts/seed_companies.py` — the seed command (flat script with the `TICKERS` list); `scripts/__init__.py` makes `python -m scripts.seed_companies` work
 - `alembic/versions/bf7faefe32ae_create_companies_table.py` — companies table (autogenerated, reviewed)
 - `tests/fixtures/company_tickers_exchange.json` — 8-company fixture in the real columnar structure (includes GOOGL and GOOG sharing a CIK, and a null exchange); `tests/test_sec_client.py`, `tests/test_companies_seed.py`, `tests/test_companies.py`. The `sec_rows` fixture in `conftest.py` gives the parsed fixture (real client code, download mocked)
-- `app/workers/celery_app.py` — the Celery app (`celery_app`), Redis broker and result backend
+- `app/workers/celery_app.py` — the Celery app (`celery_app`), Redis broker and result backend, `include=["app.workers.tasks"]`, UTC timezone and the beat schedule. `app/workers/tasks.py` — the `ingest_filings` task (thin: session, service call, log)
+- `app/models/filings.py` (`Filing`), `app/models/ingestion.py` (`IngestionRun`, `IngestionStatus`), `app/schemas/filings.py`, `app/repositories/filings.py` (`get_accession_numbers`, `create`, `list_without_document`, `list_by_company`), `app/repositories/ingestion.py` (`create_run`, `get_recent_running_run`), `app/services/filings.py` (`list_filings`), `app/services/ingestion.py` (`ingest_filings`, the whole job in one function), `app/routes/filings.py` — the 1.4 filings. `repositories/companies.py` gained `list_all`
+- `scripts/run_filing_ingestion.py` — runs the ingestion by hand
+- `alembic/versions/0f8ae16b3b79_create_filings_and_ingestion_runs_.py` — `companies.industry`, `filings` and `ingestion_runs` (autogenerated, reviewed, downgrade tested)
+- `tests/fixtures/submissions.json` (small file in the real structure, used by the client test), `tests/test_ingestion.py` (the service with the SEC client mocked, submissions data built with dates relative to today, plus the Celery wiring test), `tests/test_filings_api.py`; `tests/test_sec_client.py` also covers `sec_get` (fake clock for throttle and retries)
 - `app/models/watchlists.py` (`Watchlist` and `WatchlistItem`, with the functional unique index declared after the class), `app/schemas/watchlists.py`, `app/repositories/watchlists.py` (reads take `org_id`; the item reads join through `watchlists.org_id`; the writes at the bottom rely on the service having checked ownership), `app/services/watchlists.py`, `app/routes/watchlists.py` — the 1.3 watchlists
 - `alembic/versions/ab4b8dd0de03_create_watchlists_tables.py` — watchlists and watchlist_items (autogenerated, reviewed; it already renders the `lower(name)` index correctly)
 - `tests/test_watchlists.py` — 48 tests: auth, roles, names, list/detail, rename, delete, items, cross-organization 404 (parametrized, with a direct database check that organization A's items did not change). The `seeded` fixture (seeds 7 catalog companies with the SEC client mocked) now lives in `tests/conftest.py`, moved from `test_companies.py` because two test files use it
@@ -113,7 +124,7 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `alembic/versions/69068f636609_enable_pgvector_extension.py` — first migration, `CREATE EXTENSION IF NOT EXISTS vector`
 - `alembic/versions/e1289657f92f_create_auth_tables.py` — organizations, users, audit_logs (autogenerated, reviewed)
 - `Dockerfile`, `.dockerignore` — one `python:3.12-slim` image used by api and worker; installs `requirements-dev.txt`
-- `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker`; named volume `postgres_data`
+- `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker` (`--concurrency=1`), `beat`; named volume `postgres_data`
 - `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis, PyJWT, bcrypt, email-validator, httpx)
 - `.env.example` — template for `.env` (`.env` is git-ignored); includes `TEST_DATABASE_URL`
 - Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`
@@ -156,7 +167,7 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - One row per company, so only one ticker per company is seeded (GOOGL, not GOOG; both share CIK 1652044) (1.2)
 - The seed matches existing rows by CIK (a CIK never changes, a ticker can), validates everything before writing anything, and commits once. It is idempotent: a second run creates 0 rows and refreshes ticker, name and exchange. Its "updated" count includes unchanged rows (1.2)
 - The seed raises `ValueError` (not an HTTP error) because it is a command-line failure; the script catches only that, logs it and exits non-zero. There is no audit row, because audit_logs needs an organization and this is a system action (1.2)
-- The sector column is deferred to 1.4, because the ticker file has no sector; it comes from the SEC submissions endpoint (1.2)
+- The ticker file has no sector, so the column was deferred; in 1.4 it became `industry`, the SEC's SIC description from the submissions file (`sicDescription`). The SEC does not provide GICS sectors, so the name `sector` would mislead (1.2, 1.4)
 - The SEC ticker file is columnar (`{"fields": [...], "data": [[...]]}`); the client reads rows by field name, not position. The raw file is saved under `data/raw/sec/` before parsing (1.2)
 - The detail route uses the ticker, not the id, and the ticker is case-insensitive (uppercased in the service) (1.2)
 - Pagination uses `page` and `page_size` and returns the total, computed from the same filter as the page. There is no generic pagination utility (1.2)
@@ -171,9 +182,29 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - Services load the watchlist (org-scoped) BEFORE looking at the company, so a caller from another organization always gets "Watchlist not found" and learns nothing about companies (1.3)
 - Companies are added and removed by ticker (case-insensitive, uppercased in the service), the same key as `GET /companies/{ticker}`. The add route returns the full updated watchlist (1.3)
 - Audit rows for watchlist actions (`watchlist.create`, `.rename`, `.delete`, `.add_company`, `.remove_company`) always use the watchlist id as `entity_id` (1.3)
+- Only forms exactly `10-K` and `10-Q` are stored. Amendments (10-K/A, 10-Q/A), 8-Ks and everything else are ignored for now (1.4)
+- `fiscal_year` is the year of `report_date` (null when the SEC gives no report date), not the company's own fiscal naming (1.4)
+- Only filings filed within the last `FILINGS_LOOKBACK_YEARS` years (default 3) are stored. The cutoff is `today - 365 * years` days, using `timedelta` so a leap day cannot raise an error (1.4)
+- The submissions file has a "recent" block (at least one year of filings or 1000 rows) plus one page per roughly 1000-2000 older filings under `filings.files`. For companies that file very often (JPM, BAC, GS, MS: prospectus filings) "recent" covers only about a year, so the ingestion also fetches the older pages whose `filingTo` is on or after the cutoff, but only when the oldest date in "recent" is later than the cutoff. Every company that has the history now reaches back to the window (1.4)
+- `sec_get` is the one shared function that calls httpx: the User-Agent, the throttle and the retries are written once instead of in every client function. Throttle: at most 5 requests per second, using a module-level time of the last request, so it is per process. That is why the worker runs with `--concurrency=1`. Retries: up to 3, after waits of 1, 2 and 4 seconds, on timeouts, network errors, HTTP 429 and 5xx; other 4xx (a 404) fail at once; every retry is logged (1.4)
+- Raw submissions JSON files (main file and older pages, overwritten each run) and filing documents are saved under `data/raw/sec/` before parsing. `filings.raw_path` is relative to `RAW_DATA_DIR`, so moving the folder breaks nothing (1.4)
+- `get_submissions(cik, page_name=None)` serves both the main file and the older pages with one function, to avoid a helper chain inside the client (1.4)
+- The ingestion run row is committed first (so it is visible while the job runs) and updated at the end. Companies are committed one at a time, and each downloaded document is committed on its own, so a crash never loses finished work. A document that failed is retried by the next run, because the download step takes every filing with a null `raw_path` (1.4)
+- A run is blocked (`ConflictError`) when a `running` row for the job started less than 2 hours ago exists; older `running` rows are treated as stale (1.4)
+- `ingest_filings` has exactly one broad `except Exception`, which only marks the run `failed`, stores the error text and re-raises. Per-company errors catch `httpx.HTTPError`, `OSError` and also `KeyError` and `ValueError` (malformed data from the SEC), so one bad answer cannot stop the other companies (1.4)
+- Ingestion and filing reads write no audit rows: they are system actions and audit_logs needs an organization (1.4)
+- The task runs daily at 02:00 UTC, after US market hours. No Celery retries: tomorrow's run catches up (1.4)
+- Filings are shared public data: no function in `repositories/filings.py` or `repositories/ingestion.py` takes an `org_id`; any logged-in role can list filings (1.4)
 
 ## Known issues and tech debt
-- The SEC client has no throttling or retries yet (one request per seed run). Milestone 1.4 adds the 5 requests per second throttle and retries when the client makes many requests.
+- The SEC throttle is per process. It is global only because the worker runs with `--concurrency=1`; the manual script and the worker running at the same time would together exceed 5 requests per second (the run guard normally prevents this, but it does not cover the seed script).
+- A crashed run leaves a stale `running` row in `ingestion_runs`, which blocks new runs for 2 hours.
+- Companies whose fiscal year ends early in the calendar year, or whose quarters cross a year boundary, can have a `fiscal_year` (year of the report date) that differs from the company's own naming. Example: Apple's 10-Q for the period ending 2025-12-27 is `fiscal_year` 2025 here, though Apple calls it fiscal 2026 Q1.
+- Filing documents take disk space: after the first full run (34 companies, 397 filings) `data/raw/sec/filings` is about 1.4 GB and `data/raw/sec/submissions` about 36 MB. Only HTML main documents are stored.
+- The daily run re-downloads the submissions file of every company, plus the older pages for companies whose "recent" block is shorter than the window (about 55 extra files, mostly banks), so even a run that stores nothing takes about 50 seconds.
+- XOM has only 1 filing: the SEC ticker file now maps XOM to ExxonMobil Holdings Corp (CIK 0002115436, created by a 2026 holding-company reorganization). The 10-K/10-Q history is under the old CIK 0000034088 (EXXON MOBIL CORP), which is not in the catalog. Not handled; the history will build up under the new CIK.
+- Amendments (10-K/A, 10-Q/A) are not stored, so a restated filing is invisible. Filing `fiscal_year` and `report_date` are not corrected if the SEC later changes them (existing filings are never updated).
+- Ingestion catches `KeyError`/`ValueError` per company, but a database error inside a company's step still goes to the broad handler and fails the whole run.
 - If the SEC reassigns a ticker to a different CIK while another seeded row still holds it, the seed's update would hit the unique constraint on `ticker` and fail with nothing committed. Very unlikely for the current large-cap list; not handled.
 - Files written by containers (e.g. `data/raw/sec/`) are owned by root on the host, because the containers run as root. Deleting them from the host needs `sudo`.
 - Two simultaneous registrations (or user creations) with the same email both pass the "email exists" check, and the second then fails on the unique constraint, which surfaces as a 500 instead of a 409. Not handled yet.
@@ -193,3 +224,4 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - 1.1 (2026-10-02): Organizations, users and audit_logs tables (one migration), bcrypt + JWT security module, register/login/me and admin-only user creation, org-scoped user list/detail with 404 for other organizations, 401/403 handlers, 34 tests including cross-organization isolation and the db-fixture rollback test.
 - 1.2 (2026-10-02): `companies` table (one migration, no org_id), SEC client for the ticker file with raw-file saving, idempotent seed script for 34 tickers (matches by CIK, validates before writing), paginated and searchable `GET /companies` and `GET /companies/{ticker}` for any role, 23 new tests (57 total). `SEC_USER_AGENT` and `RAW_DATA_DIR` settings; httpx moved to runtime requirements.
 - 1.3 (2026-10-02): `watchlists` and `watchlist_items` tables (one migration, case-insensitive unique name per organization via a functional index, composite primary key with cascade), `require_editor` dependency, 7 org-scoped watchlist endpoints (viewers read-only, other organizations get 404), audit rows, 48 new tests (105 total). `CLAUDE.md` data model line and a roles rule updated. `seeded` test fixture moved to `conftest.py`.
+- 1.4 (2026-10-02): `filings` and `ingestion_runs` tables and `companies.industry` (one migration), `sec_get` (throttle, User-Agent, retries) plus submissions and filing-document downloads in the SEC client, `ingest_filings` service (per-company and per-document commits, run guard, older submissions pages for busy filers), Celery task with a 02:00 UTC beat schedule and a `beat` service, `GET /companies/{ticker}/filings`, manual trigger script, 41 new tests (146 total). Real run: 34 companies, 397 filings and documents, 1.4 GB, 3m39s. `CLAUDE.md` section 5 updated (companies, filings, ingestion_runs).

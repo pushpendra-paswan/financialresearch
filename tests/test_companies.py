@@ -118,6 +118,8 @@ def test_get_company_by_ticker_is_case_insensitive(
     assert body["ticker"] == "AAPL"
     assert body["cik"] == "0000320193"
     assert body["exchange"] == "Nasdaq"
+    # The industry is filled by the filing ingestion, so it is null for a freshly seeded company
+    assert body["industry"] is None
 
 
 def test_unknown_ticker_returns_404(client: TestClient, headers: dict[str, str]) -> None:

@@ -52,3 +52,8 @@ def search_companies(
     )
     companies = list(db.execute(page_statement).scalars().all())
     return companies, total
+
+
+def list_all(db: Session) -> list[Company]:
+    statement = select(Company).order_by(Company.ticker)
+    return list(db.execute(statement).scalars().all())

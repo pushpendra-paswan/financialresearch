@@ -162,12 +162,12 @@ Only the agent gets its own folder, because its tools and graph are a distinct l
 ## 5. Data model
 
 Shared public data (no `org_id`; every organization reads the same rows):
-- `companies` (ticker unique, cik unique as a 10-character zero-padded string, name, exchange; sector is added in milestone 1.4)
-- `filings` (company_id, accession_number unique, form_type, filed_on, fiscal_year, raw_path)
+- `companies` (ticker unique, cik unique as a 10-character zero-padded string, name, exchange, industry = the SEC's SIC description; there is no GICS sector)
+- `filings` (company_id, accession_number unique, form_type, filed_on, report_date, fiscal_year, primary_document, raw_path relative to RAW_DATA_DIR)
 - `financial_facts` (company_id, concept, value, unit, period_end, fiscal_year, fiscal_period)
 - `price_bars` (company_id, trade_date, open, high, low, close, volume; unique on company_id + trade_date)
 - `document_chunks` (filing_id, company_id, section, fiscal_year, content, embedding)
-- `ingestion_runs` (job_type, status, started_at, finished_at, error)
+- `ingestion_runs` (job_type, status running/success/partial/failed, started_at, finished_at, message, error)
 
 Private organization data (every table has `org_id`):
 - `organizations`, `users` (org_id, email, role: admin / analyst / viewer)

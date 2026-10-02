@@ -41,7 +41,20 @@ services:
 
   worker:
     build: .
-    command: celery -A app.workers.celery_app worker --loglevel=info
+    # One worker process, because the SEC request throttle lives inside each process
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=1
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    command: celery -A app.workers.celery_app beat --loglevel=info --schedule /tmp/celerybeat-schedule
     env_file: .env
     volumes:
       - .:/app

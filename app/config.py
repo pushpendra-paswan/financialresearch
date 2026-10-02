@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     SEC_USER_AGENT: str
     # Raw downloaded files are saved here before parsing (relative to the project root)
     RAW_DATA_DIR: str = "data/raw"
+    # Filing ingestion stores only filings filed within this many years
+    FILINGS_LOOKBACK_YEARS: int = 3
 
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str
