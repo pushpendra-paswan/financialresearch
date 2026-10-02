@@ -164,7 +164,7 @@ Only the agent gets its own folder, because its tools and graph are a distinct l
 Shared public data (no `org_id`; every organization reads the same rows):
 - `companies` (ticker unique, cik unique as a 10-character zero-padded string, name, exchange, industry = the SEC's SIC description; there is no GICS sector)
 - `filings` (company_id, accession_number unique, form_type, filed_on, report_date, fiscal_year, primary_document, raw_path relative to RAW_DATA_DIR)
-- `financial_facts` (company_id, concept, value, unit, period_end, fiscal_year, fiscal_period)
+- `financial_facts` (company_id, concept, unit, period_start nullable, period_end, value, fiscal_year = year of period_end, form_type, accession_number, filed_on; one row per period holding the value from the latest-filed 10-K; unique on company_id + concept + unit + period_start + period_end; annual data only)
 - `price_bars` (company_id, trade_date, open, high, low, close, volume; unique on company_id + trade_date)
 - `document_chunks` (filing_id, company_id, section, fiscal_year, content, embedding)
 - `ingestion_runs` (job_type, status running/success/partial/failed, started_at, finished_at, message, error)
@@ -254,7 +254,7 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: create/add/remove works and other organizations cannot see it.
 - **1.4 SEC client and filing ingestion**: SEC client, raw storage, filings and ingestion_runs tables, Celery task plus beat schedule for daily filing checks.
   Done when: running the job twice creates no duplicates and filings appear on the company endpoint.
-- **1.5 Financial facts**: financial_facts table and ingestion of selected us-gaap concepts (revenue, net income, assets, EPS, etc.).
+- **1.5 Financial facts**: financial_facts table and ingestion of ANNUAL (10-K) us-gaap values for a fixed allowlist of concepts (revenue, net income, assets, EPS, etc.).
   Done when: an endpoint returns a company's yearly revenue for the last 5 years.
 - **1.6 Prices**: `PriceProvider` interface with one implementation, price_bars table, backfill script, daily end-of-day job.
   Done when: price history is returned, and swapping providers needs only a new class.

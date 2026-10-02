@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
-from app.routes import auth, companies, filings, health, users, watchlists
+from app.routes import auth, companies, filings, financials, health, users, watchlists
 
 # Configure logging once, at startup
 logging.basicConfig(
@@ -20,6 +20,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(companies.router)
 app.include_router(filings.router)
+app.include_router(financials.router)
 app.include_router(users.router)
 app.include_router(watchlists.router)
 

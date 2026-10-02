@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/{file_name}"
+COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 FILING_DOCUMENT_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{document}"
 
 # The SEC allows at most 10 requests per second; we stay at 5
@@ -125,3 +126,15 @@ def download_filing_document(cik: str, accession_number: str, primary_document: 
 
     # The database stores the path relative to RAW_DATA_DIR, so moving the folder breaks nothing
     return str(file_path.relative_to(raw_dir))
+
+
+def get_company_facts(cik: str) -> dict:
+    response = sec_get(COMPANY_FACTS_URL.format(cik=cik), timeout=60.0)
+
+    # Save the raw file before parsing (overwritten on every run)
+    raw_path = Path(settings.RAW_DATA_DIR) / "sec" / "companyfacts" / f"CIK{cik}.json"
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_path.write_bytes(response.content)
+    logger.info("Saved SEC company facts to %s", raw_path)
+
+    return response.json()

@@ -239,3 +239,22 @@ def test_download_filing_document_builds_the_url_and_saves_the_file(
     # The file is saved under the padded CIK and the dashed accession number
     assert relative_path == "sec/filings/0000320193/0000320193-25-000079/aapl-20250927.htm"
     assert (tmp_path / relative_path).read_bytes() == b"<html>10-K</html>"
+
+
+def test_get_company_facts_uses_the_padded_cik_and_saves_the_raw_file(
+    monkeypatch: pytest.MonkeyPatch, sleeps: list[float], tmp_path: Path
+) -> None:
+    body = b'{"cik": 320193, "entityName": "Apple Inc.", "facts": {"us-gaap": {}}}'
+    calls = mock_httpx_get(monkeypatch, [make_response(200, body)])
+    monkeypatch.setattr(settings, "RAW_DATA_DIR", str(tmp_path))
+
+    facts = sec.get_company_facts("0000320193")
+
+    url, kwargs = calls[0]
+    assert url == "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json"
+    assert kwargs["timeout"] == 60.0
+    assert kwargs["headers"] == {"User-Agent": settings.SEC_USER_AGENT}
+    assert facts == json.loads(body)
+    # The raw file is saved before parsing, byte for byte
+    raw_file = tmp_path / "sec" / "companyfacts" / "CIK0000320193.json"
+    assert raw_file.read_bytes() == body

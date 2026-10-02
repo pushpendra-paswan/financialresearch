@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     RAW_DATA_DIR: str = "data/raw"
     # Filing ingestion stores only filings filed within this many years
     FILINGS_LOOKBACK_YEARS: int = 3
+    # Financial fact ingestion stores only periods that ended within this many years
+    FINANCIALS_LOOKBACK_YEARS: int = 6
 
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str

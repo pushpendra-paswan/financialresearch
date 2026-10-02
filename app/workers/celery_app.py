@@ -20,4 +20,9 @@ celery_app.conf.beat_schedule = {
         "task": "ingest_filings",
         "schedule": crontab(hour=2, minute=0),
     },
+    # One hour after the filings job, so the two jobs do not share the SEC throttle
+    "ingest-financial-facts-daily": {
+        "task": "ingest_financial_facts",
+        "schedule": crontab(hour=3, minute=0),
+    },
 }
