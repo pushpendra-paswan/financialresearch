@@ -162,7 +162,7 @@ Only the agent gets its own folder, because its tools and graph are a distinct l
 ## 5. Data model
 
 Shared public data (no `org_id`; every organization reads the same rows):
-- `companies` (ticker, cik, name, sector)
+- `companies` (ticker unique, cik unique as a 10-character zero-padded string, name, exchange; sector is added in milestone 1.4)
 - `filings` (company_id, accession_number unique, form_type, filed_on, fiscal_year, raw_path)
 - `financial_facts` (company_id, concept, value, unit, period_end, fiscal_year, fiscal_period)
 - `price_bars` (company_id, trade_date, open, high, low, close, volume; unique on company_id + trade_date)

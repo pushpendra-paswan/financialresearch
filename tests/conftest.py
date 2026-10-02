@@ -1,6 +1,8 @@
 import os
 from collections.abc import Callable, Generator
+from pathlib import Path
 
+import httpx
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -29,6 +31,8 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 
 from alembic import command
+from app.clients import sec
+from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
@@ -103,3 +107,21 @@ def register_org(client: TestClient) -> Callable[[str, str], dict[str, str]]:
         return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
     return register
+
+
+# A small file in the same structure as the real SEC company_tickers_exchange.json
+SEC_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "company_tickers_exchange.json"
+
+
+@pytest.fixture
+def sec_rows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[dict]:
+    # The parsed fixture, produced by the real client code with the download mocked,
+    # so no test ever calls the SEC
+    def fake_get(url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            200, content=SEC_FIXTURE_PATH.read_bytes(), request=httpx.Request("GET", url)
+        )
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(settings, "RAW_DATA_DIR", str(tmp_path))
+    return sec.get_company_tickers()

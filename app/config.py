@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Sent as the User-Agent on every SEC request. No default on purpose: the SEC requires a real
+    # contact in the form "FinCopilot your.name@example.com"
+    SEC_USER_AGENT: str
+    # Raw downloaded files are saved here before parsing (relative to the project root)
+    RAW_DATA_DIR: str = "data/raw"
+
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str
     REDIS_URL: str

@@ -16,6 +16,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://fincopilot:ci_password@localhost:5432/fincopilot
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: ci-throwaway-secret-not-a-real-key
+      SEC_USER_AGENT: FinCopilot ci-throwaway@example.com
       TEST_DATABASE_URL: postgresql+psycopg://fincopilot:ci_password@localhost:5432/fincopilot_test
 
     services:

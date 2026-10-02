@@ -2,11 +2,11 @@
 
 ## Current status
 - Current phase: Phase 1 (Traditional backend)
-- Last completed milestone: 1.1 Auth and multi-tenancy
-- Next milestone: 1.2 Company catalog
+- Last completed milestone: 1.2 Company catalog
+- Next milestone: 1.3 Watchlists
 
 ## How to run
-- Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`). The app and the tests will not start without it. After changing `.env`, run `docker compose up -d` so the containers pick it up
+- Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`) and `SEC_USER_AGENT` (`FinCopilot your.name@example.com`, a real contact email). The app and the tests will not start without them. After changing `.env`, run `docker compose up -d` so the containers pick it up
 - Start services: `docker compose up --build` (db, redis, api on port 8000, worker; add `-d` to run in the background)
 - Run migrations: `docker compose exec api alembic upgrade head` (roll back one step: `docker compose exec api alembic downgrade -1`)
 - Check it: `curl localhost:8000/health` returns `{"status":"ok"}`; `curl localhost:8000/health/ready` checks database and Redis
@@ -18,7 +18,8 @@
 - Lint: `docker compose exec api ruff check .` (add `--fix` to apply safe fixes)
 - Format: `docker compose exec api ruff format .` (check only: `ruff format --check .`)
 - CI: `.github/workflows/ci.yml` runs `ruff check .`, `ruff format --check .` and `pytest` on pushes to `main`/`master` and on all pull requests
-- Seed / backfill commands: None yet
+- Seed / backfill commands: `docker compose exec api python -m scripts.seed_companies` (downloads the SEC ticker file and loads the 34 tickers listed in the script; safe to run repeatedly. Exits with status 1 and writes nothing if a ticker is missing from the SEC data or two tickers share a CIK)
+- Seeded tickers (the `TICKERS` list in `scripts/seed_companies.py`): AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, AMD, INTC, ORCL, CRM, ADBE, JPM, BAC, GS, MS, WFC, V, MA, JNJ, PFE, UNH, LLY, MRK, XOM, CVX, WMT, KO, PEP, MCD, NKE, DIS, BA, CAT
 
 ## Environment variables
 | Name | Purpose |
@@ -34,6 +35,8 @@
 | JWT_SECRET_KEY | Secret that signs login tokens. Required, no default. Generate with `openssl rand -hex 32` |
 | JWT_ALGORITHM | JWT signing algorithm. Default "HS256" |
 | ACCESS_TOKEN_EXPIRE_MINUTES | Lifetime of an access token in minutes. Default 60 |
+| SEC_USER_AGENT | Sent as the `User-Agent` on every SEC request. Required, no default. Must identify you with a real contact email, in the form `FinCopilot your.name@example.com` |
+| RAW_DATA_DIR | Folder for raw downloaded files, relative to the project root. Default `data/raw` |
 | TEST_DATABASE_URL | Used only by pytest (`tests/conftest.py`), not part of `Settings`. Same format as `DATABASE_URL`, but the database name must end with `_test` (`fincopilot_test`). Replaces `DATABASE_URL` during tests. Required to run tests |
 
 ## Database tables
@@ -42,6 +45,7 @@
 | organizations | A tenant (a team) | `id` (identity), `name`, `created_at` | 1.1 |
 | users | Members of an organization | `id`, `org_id` (FK, indexed), `email` (unique, lowercase), `hashed_password`, `role` (string, CHECK `ck_users_role` in admin/analyst/viewer), `created_at` | 1.1 |
 | audit_logs | Who did what | `id`, `org_id` (FK, indexed), `user_id` (FK), `action` (e.g. `user.create`), `entity_id` (nullable), `created_at` | 1.1 |
+| companies | Shared public catalog of US-listed companies (no `org_id`) | `id` (identity), `ticker` (unique), `cik` (unique, 10-character zero-padded string, e.g. `0000320193`), `name`, `exchange` (nullable), `created_at`. No extra indexes: the unique constraints are enough for ~34 rows. Sector arrives in 1.4 | 1.2 |
 
 The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_version` table. The `fincopilot_test` database has the same schema, created by the tests. All `created_at` columns are `timestamptz` with server default `now()`.
 
@@ -56,6 +60,8 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | POST | /users | Creates a user (admin, analyst or viewer) in the caller's organization. 201. 409 if the email exists anywhere | Admin |
 | GET | /users | Lists users of the caller's organization (no pagination) | Any logged-in user |
 | GET | /users/{user_id} | One user of the caller's organization. 404 "User not found" if missing or in another organization | Any logged-in user |
+| GET | /companies | Paginated company list. Query: `search` (max 50 chars; literal, case-insensitive substring match on ticker or name; exact ticker match first, then by ticker), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`. 422 for invalid values | Any logged-in user |
+| GET | /companies/{ticker} | One company by ticker (case-insensitive). 404 "Company not found" if unknown | Any logged-in user |
 
 Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong role: 403.
 
@@ -71,16 +77,21 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin)
 - `app/exceptions.py` — `NotFoundError`, `ConflictError`, `UnauthorizedError`, `ForbiddenError`
 - `app/security.py` — `hash_password`, `verify_password` (bcrypt), `create_access_token`, `decode_access_token` (PyJWT)
-- `app/models/organizations.py`, `users.py` (also `UserRole`), `audit.py` — the 1.1 tables
+- `app/models/organizations.py`, `users.py` (also `UserRole`), `audit.py` — the 1.1 tables; `companies.py` — the 1.2 table (no `org_id`)
 - `app/schemas/auth.py`, `users.py` — request and response schemas; `check_password_bytes` (72-byte limit) is shared by the register, login and create-user schemas
 - `app/repositories/organizations.py`, `users.py`, `audit.py` — queries; add and flush, never commit
 - `app/services/auth.py` (`register`, `login`) and `users.py` (`create_user`, `list_users`, `get_user`) — business logic, own the commits
 - `app/routes/auth.py`, `users.py` — the 1.1 endpoints
 - `app/routes/health.py` — `GET /health` and `GET /health/ready`
+- `app/clients/sec.py` — `get_company_tickers()`: downloads the SEC ticker file, saves the raw response to `<RAW_DATA_DIR>/sec/company_tickers_exchange.json`, returns dicts with `cik` (padded), `ticker`, `name`, `exchange`. The first external client
+- `app/schemas/companies.py`, `app/repositories/companies.py` (`get_by_ticker`, `get_by_cik`, `create`, `search_companies`), `app/services/companies.py` (`list_companies`, `get_company`, `seed_companies`), `app/routes/companies.py` — the 1.2 catalog
+- `scripts/seed_companies.py` — the seed command (flat script with the `TICKERS` list); `scripts/__init__.py` makes `python -m scripts.seed_companies` work
+- `alembic/versions/bf7faefe32ae_create_companies_table.py` — companies table (autogenerated, reviewed)
+- `tests/fixtures/company_tickers_exchange.json` — 8-company fixture in the real columnar structure (includes GOOGL and GOOG sharing a CIK, and a null exchange); `tests/test_sec_client.py`, `tests/test_companies_seed.py`, `tests/test_companies.py`. The `sec_rows` fixture in `conftest.py` gives the parsed fixture (real client code, download mocked)
 - `app/workers/celery_app.py` — the Celery app (`celery_app`), Redis broker and result backend
 - `app/models/__init__.py` — imports every model file so Alembic sees it. Convention: every new model file is imported here
 - `pyproject.toml` — tool config only: ruff (line length 100, py312, rules E/F/I/B/UP, excludes `alembic/versions` and `*.md`, `fastapi.Depends` treated as immutable for B008, E402 allowed in `tests/conftest.py`) and pytest (`testpaths`, `pythonpath`)
-- `requirements-dev.txt` — `-r requirements.txt` plus pinned pytest, httpx (for `TestClient`) and ruff
+- `requirements-dev.txt` — `-r requirements.txt` plus pinned pytest and ruff (httpx is in `requirements.txt` now and also serves `TestClient`)
 - `tests/conftest.py` — sets `DATABASE_URL` from `TEST_DATABASE_URL` before the app is imported, the `_test` name guard, session fixture that creates the test database and runs `alembic upgrade head`, and the `db` and `client` fixtures
 - `tests/test_health.py`, `tests/test_exceptions.py`, `tests/test_database.py` — health endpoints, exception handlers (404, 409, 401, 403 via throwaway routes), pgvector extension exists, rollback isolation of service commits
 - `tests/test_auth.py`, `tests/test_users.py` — registration, login, token rejection, roles, cross-organization isolation. The `register_org` fixture in `conftest.py` registers an organization and returns the admin's auth headers
@@ -91,9 +102,8 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `alembic/versions/e1289657f92f_create_auth_tables.py` — organizations, users, audit_logs (autogenerated, reviewed)
 - `Dockerfile`, `.dockerignore` — one `python:3.12-slim` image used by api and worker; installs `requirements-dev.txt`
 - `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker`; named volume `postgres_data`
-- `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis, PyJWT, bcrypt, email-validator)
+- `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis, PyJWT, bcrypt, email-validator, httpx)
 - `.env.example` — template for `.env` (`.env` is git-ignored); includes `TEST_DATABASE_URL`
-- Empty packages (only `__init__.py`): `app/clients`
 - Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`
 
 ## Design decisions
@@ -129,8 +139,22 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - Services own `db.commit()` (one commit per service call); repositories only add and flush (1.1)
 - `require_admin` is a plain dependency, not a role-checking factory. Checks for other roles are added in the milestones that need them (1.1)
 - `get_current_user` uses `HTTPBearer(auto_error=False)` so a missing token raises our own `UnauthorizedError` and has the same `{"detail": ...}` format and `WWW-Authenticate` header as other 401s (1.1)
+- Companies are shared public data: the table has no `org_id` and no function in `repositories/companies.py` takes one (1.2)
+- The CIK is stored as a zero-padded 10-character string, because that is the format the data.sec.gov endpoints need in 1.4 and 1.5. The SEC ticker file gives it as an integer, so the client pads it (1.2)
+- One row per company, so only one ticker per company is seeded (GOOGL, not GOOG; both share CIK 1652044) (1.2)
+- The seed matches existing rows by CIK (a CIK never changes, a ticker can), validates everything before writing anything, and commits once. It is idempotent: a second run creates 0 rows and refreshes ticker, name and exchange. Its "updated" count includes unchanged rows (1.2)
+- The seed raises `ValueError` (not an HTTP error) because it is a command-line failure; the script catches only that, logs it and exits non-zero. There is no audit row, because audit_logs needs an organization and this is a system action (1.2)
+- The sector column is deferred to 1.4, because the ticker file has no sector; it comes from the SEC submissions endpoint (1.2)
+- The SEC ticker file is columnar (`{"fields": [...], "data": [[...]]}`); the client reads rows by field name, not position. The raw file is saved under `data/raw/sec/` before parsing (1.2)
+- The detail route uses the ticker, not the id, and the ticker is case-insensitive (uppercased in the service) (1.2)
+- Pagination uses `page` and `page_size` and returns the total, computed from the same filter as the page. There is no generic pagination utility (1.2)
+- Search is a literal (`icontains(..., autoescape=True)`, so `%` and `_` are not wildcards), case-insensitive substring match on ticker or name. An exact ticker match (ignoring case) sorts first, then by ticker. Text that is empty after stripping means no filter (1.2)
+- Any logged-in role (admin, analyst, viewer) can read the catalog (1.2)
 
 ## Known issues and tech debt
+- The SEC client has no throttling or retries yet (one request per seed run). Milestone 1.4 adds the 5 requests per second throttle and retries when the client makes many requests.
+- If the SEC reassigns a ticker to a different CIK while another seeded row still holds it, the seed's update would hit the unique constraint on `ticker` and fail with nothing committed. Very unlikely for the current large-cap list; not handled.
+- Files written by containers (e.g. `data/raw/sec/`) are owned by root on the host, because the containers run as root. Deleting them from the host needs `sudo`.
 - Two simultaneous registrations (or user creations) with the same email both pass the "email exists" check, and the second then fails on the unique constraint, which surfaces as a 500 instead of a 409. Not handled yet.
 - Login is faster for an unknown email than for a wrong password (bcrypt is skipped when no user is found), so response timing can reveal whether an email has an account even though the error bodies are identical. Fix later by verifying against a dummy hash.
 - Access tokens cannot be revoked before they expire (no logout, refresh or deactivation yet). Deleting a user does invalidate their token, because the user is loaded on every request.
@@ -143,3 +167,4 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - 0.2 (2026-10-02): Dockerfile and docker-compose (db with pgvector, redis, api, worker), SQLAlchemy engine/session/Base and `get_db`, Alembic with a hand-written pgvector-extension migration, Celery app (no tasks), `GET /health/ready`.
 - 0.3 (2026-10-02): pytest against a real Postgres test database (`fincopilot_test`, safety guard, savepoint rollback per test, `db` and `client` fixtures), 5 tests, ruff config (E/F/I/B/UP), `requirements-dev.txt` installed in the Docker image, GitHub Actions workflow with Postgres and Redis service containers.
 - 1.1 (2026-10-02): Organizations, users and audit_logs tables (one migration), bcrypt + JWT security module, register/login/me and admin-only user creation, org-scoped user list/detail with 404 for other organizations, 401/403 handlers, 34 tests including cross-organization isolation and the db-fixture rollback test.
+- 1.2 (2026-10-02): `companies` table (one migration, no org_id), SEC client for the ticker file with raw-file saving, idempotent seed script for 34 tickers (matches by CIK, validates before writing), paginated and searchable `GET /companies` and `GET /companies/{ticker}` for any role, 23 new tests (57 total). `SEC_USER_AGENT` and `RAW_DATA_DIR` settings; httpx moved to runtime requirements.
