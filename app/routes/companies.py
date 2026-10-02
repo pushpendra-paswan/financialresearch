@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
-from app.models.companies import Company
 from app.models.users import User
 from app.schemas.companies import CompanyListResponse, CompanyResponse
 from app.services import companies as company_service
@@ -26,5 +25,5 @@ def get_company(
     ticker: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> Company:
+) -> CompanyResponse:
     return company_service.get_company(db, ticker)

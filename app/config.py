@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     # Every price run fetches this many years of daily bars (365 days per year)
     PRICES_LOOKBACK_YEARS: int = 5
 
+    # Rate limits: requests per 60-second window. Login/register are counted per client IP,
+    # every other protected route per authenticated user
+    RATE_LIMIT_AUTH_PER_MINUTE: int = 10
+    RATE_LIMIT_API_PER_MINUTE: int = 120
+    # Cached shared reads (companies, prices) expire after this many seconds
+    CACHE_TTL_SECONDS: int = 600
+
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str
     REDIS_URL: str

@@ -9,6 +9,7 @@ from app.clients import prices as price_client
 from app.config import settings
 from app.exceptions import NotFoundError
 from app.models.ingestion import IngestionRun
+from app.redis_client import cache_get, cache_set
 from app.repositories import companies as company_repository
 from app.repositories import prices as price_repository
 from app.schemas.prices import PriceBarResponse, PriceHistoryResponse
@@ -124,6 +125,14 @@ def ingest_prices(db: Session, now_eastern: datetime | None = None) -> Ingestion
 
 
 def get_prices(db: Session, ticker: str, days: int) -> PriceHistoryResponse:
+    # Cache key: uppercased ticker plus the window, so each `days` value has its own entry.
+    # Prices are shared public data.
+    cache_key = f"prices:{ticker.upper()}:{days}"
+    cached = cache_get(cache_key, PriceHistoryResponse)
+    if cached is not None:
+        return cached
+
+    # The 404 is raised before anything is cached, so errors are never stored
     company = company_repository.get_by_ticker(db, ticker.upper())
     if company is None:
         raise NotFoundError("Company not found")
@@ -143,4 +152,6 @@ def get_prices(db: Session, ticker: str, days: int) -> PriceHistoryResponse:
         )
         for row in rows
     ]
-    return PriceHistoryResponse(ticker=company.ticker, name=company.name, bars=bars)
+    response = PriceHistoryResponse(ticker=company.ticker, name=company.name, bars=bars)
+    cache_set(cache_key, response)
+    return response

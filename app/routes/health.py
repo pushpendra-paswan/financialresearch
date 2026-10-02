@@ -1,14 +1,14 @@
 import logging
 
-import redis
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.dependencies import get_db
+from app.redis_client import redis_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -31,13 +31,10 @@ def health_ready(db: Session = Depends(get_db)) -> JSONResponse:
         logger.exception("Readiness check: database failed")
         database_status = "error"
 
-    # Short timeouts so a stopped Redis gives a fast 503 instead of hanging
+    # The shared client has short timeouts, so a stopped Redis gives a fast 503
     try:
-        redis_client = redis.Redis.from_url(
-            settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2
-        )
         redis_client.ping()
-    except redis.RedisError:
+    except RedisError:
         logger.exception("Readiness check: redis failed")
         redis_status = "error"
 

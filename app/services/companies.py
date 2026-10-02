@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.clients import sec
 from app.exceptions import NotFoundError
-from app.models.companies import Company
+from app.redis_client import cache_get, cache_set
 from app.repositories import companies as company_repository
 from app.schemas.companies import CompanyListResponse, CompanyResponse
 
@@ -17,22 +17,41 @@ def list_companies(
     # Text that is empty after stripping means "no filter"
     search = (search or "").strip() or None
 
+    # Cache key: the normalized search (case-insensitive, so lowercased) plus the page, so
+    # every distinct query has its own entry. Companies are shared public data.
+    cache_key = f"companies:list:{(search or '').lower()}:{page}:{page_size}"
+    cached = cache_get(cache_key, CompanyListResponse)
+    if cached is not None:
+        return cached
+
     offset = (page - 1) * page_size
     companies, total = company_repository.search_companies(db, search, page_size, offset)
 
-    return CompanyListResponse(
+    response = CompanyListResponse(
         items=[CompanyResponse.model_validate(company) for company in companies],
         total=total,
         page=page,
         page_size=page_size,
     )
+    cache_set(cache_key, response)
+    return response
 
 
-def get_company(db: Session, ticker: str) -> Company:
+def get_company(db: Session, ticker: str) -> CompanyResponse:
+    # Cache key: the uppercased ticker, so "aapl" and "AAPL" share one entry
+    cache_key = f"company:{ticker.upper()}"
+    cached = cache_get(cache_key, CompanyResponse)
+    if cached is not None:
+        return cached
+
+    # The 404 is raised before anything is cached, so errors are never stored
     company = company_repository.get_by_ticker(db, ticker.upper())
     if company is None:
         raise NotFoundError("Company not found")
-    return company
+
+    response = CompanyResponse.model_validate(company)
+    cache_set(cache_key, response)
+    return response
 
 
 def seed_companies(db: Session, tickers: list[str]) -> tuple[int, int]:

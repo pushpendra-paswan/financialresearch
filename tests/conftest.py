@@ -1,6 +1,7 @@
 import os
 from collections.abc import Callable, Generator
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -26,6 +27,22 @@ if not test_database_name or not test_database_name.endswith("_test"):
 
 os.environ["DATABASE_URL"] = test_database_url
 
+# Same idea for Redis: the tests flush their Redis database before every test, so it must never
+# be the development one (database 0)
+test_redis_url = os.environ.get("TEST_REDIS_URL")
+if not test_redis_url:
+    pytest.exit("TEST_REDIS_URL is not set. Add it to .env (see .env.example).", returncode=2)
+
+test_redis_database = urlparse(test_redis_url).path.lstrip("/") or "0"
+if not test_redis_database.isdigit() or int(test_redis_database) == 0:
+    pytest.exit(
+        f"Refusing to run: TEST_REDIS_URL uses Redis database '{test_redis_database}', but it "
+        "must be a NON-ZERO database number (0 is the development one and would be flushed).",
+        returncode=2,
+    )
+
+os.environ["REDIS_URL"] = test_redis_url
+
 # These imports must come after the environment override above
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -36,6 +53,7 @@ from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
+from app.redis_client import redis_client
 from app.services import companies as company_service
 
 
@@ -58,6 +76,19 @@ def test_database() -> None:
     # Bring the schema up to date. alembic/env.py reads DATABASE_URL, which now points at the
     # test database. This is a no-op when it is already at head.
     command.upgrade(Config("alembic.ini"), "head")
+
+
+@pytest.fixture(autouse=True)
+def clean_redis() -> None:
+    # Rate-limit counters and cached responses must never leak from one test into the next
+    redis_client.flushdb()
+
+
+@pytest.fixture(autouse=True)
+def high_rate_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The rest of the suite must never hit a limit. Rate-limit tests set small values themselves.
+    monkeypatch.setattr(settings, "RATE_LIMIT_AUTH_PER_MINUTE", 1_000_000)
+    monkeypatch.setattr(settings, "RATE_LIMIT_API_PER_MINUTE", 1_000_000)
 
 
 @pytest.fixture

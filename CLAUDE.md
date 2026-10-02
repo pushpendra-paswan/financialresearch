@@ -24,7 +24,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - FastAPI (sync route handlers, `def` not `async def`, unless streaming or a clear reason requires async)
 - SQLAlchemy 2.0 (sync, 2.0-style `select()` queries) + Alembic
 - PostgreSQL 16 with the pgvector extension
-- Redis (cache, Celery broker)
+- Redis (cache, rate limiting, Celery broker)
 - Celery + Celery beat (background and scheduled jobs)
 - Pydantic v2 + pydantic-settings
 - JWT auth (PyJWT) + bcrypt password hashing
@@ -121,6 +121,7 @@ fin-copilot/
 │   ├── main.py            # FastAPI app, router registration, exception handlers
 │   ├── config.py          # Settings from environment variables
 │   ├── database.py        # Engine and session
+│   ├── redis_client.py    # The only module that talks to Redis directly; cache and rate-limit helpers
 │   ├── dependencies.py    # get_db, get_current_user, role checks
 │   ├── exceptions.py      # Custom exceptions (NotFoundError, ConflictError, ...)
 │   ├── security.py        # Password hashing and JWT create/decode
@@ -204,6 +205,12 @@ Tables are created only in the milestone that needs them.
 - Tests never call real external APIs or real LLMs. Use saved fixture files and mocks. For LangChain code, use the fake chat model and deterministic fake embeddings from `langchain_core` instead of real providers.
 - Tests run against a real Postgres test database, not SQLite.
 
+### API conventions
+- Every error response is `{"detail": "<string>"}`. A 429 also sends a `Retry-After` header. Unhandled errors return a generic 500 and never expose the exception text.
+- Only shared public data (companies, filings, financial facts, prices) may be cached, with a TTL only. Data with an `org_id` or `user_id` is never cached. Cache failures never fail a request.
+- Rate limits are enforced with Redis dependencies: `limit_auth` for login and register, `limit_user` for every protected route. A new router must be included with `dependencies=[Depends(limit_user)]`.
+- Unique-constraint violations that slip past the service checks become 409.
+
 ### AI behaviour (Phases 2 and 3)
 - Answers use only retrieved filing text. Every factual claim has a citation stored in `citations`.
 - When the retrieved evidence is weak, the answer says it does not know.
@@ -262,7 +269,9 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: price history is returned, and swapping providers needs only a new class.
 - **1.7 Alerts and notifications**: alert CRUD (personal alerts), an evaluation job chained after the daily price job, in-app notifications.
   Done when: a test with fixture prices triggers exactly one notification.
-- **1.8 Hardening and frontend**: Redis caching for company and price reads, API rate limiting, consistent error responses, frontend pages (login, watchlists, company page with chart and filings, notifications).
+- **1.8 Backend hardening**: consistent error responses, Redis rate limiting, Redis caching of shared reads.
+  Done when: the limits, the cache and the error format are proven by tests and by the manual checks.
+- **1.9 Frontend**: plain HTML/CSS/JS pages (login, watchlists, company page with price chart and filings, notifications, alerts).
   Done when: the full Phase 1 flow works in the browser.
 
 ### Phase 2: RAG

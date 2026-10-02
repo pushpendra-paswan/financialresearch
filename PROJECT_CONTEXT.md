@@ -2,8 +2,8 @@
 
 ## Current status
 - Current phase: Phase 1 (Traditional backend)
-- Last completed milestone: 1.7 Alerts and notifications
-- Next milestone: 1.8 Hardening and frontend
+- Last completed milestone: 1.8 Backend hardening
+- Next milestone: 1.9 Frontend
 
 ## How to run
 - Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`) and `SEC_USER_AGENT` (`FinCopilot your.name@example.com`, a real contact email). The app and the tests will not start without them. After changing `.env`, run `docker compose up -d` so the containers pick it up
@@ -14,7 +14,8 @@
 - psql shell: `docker compose exec db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'`
 - Reset the database (deletes all data): `docker compose down -v`, then start and migrate again
 - Code changes under the project folder reload the API automatically. The worker and beat do NOT reload: after changing task code, the schedule or `docker-compose.yml`, run `docker compose up -d --build` (or `docker compose restart worker beat` for code-only changes)
-- Run tests: `docker compose exec api pytest` (needs the stack running; creates the `fincopilot_test` database on first run and reuses it afterwards)
+- Run tests: `docker compose exec api pytest` (needs the stack running and `TEST_DATABASE_URL` and `TEST_REDIS_URL` in `.env`; creates the `fincopilot_test` database on first run and reuses it afterwards; flushes Redis database 1 before every test). The full suite takes about 2.5 minutes (bcrypt)
+- Rate limits and cache by hand: `docker compose exec redis redis-cli keys '*'` shows the `ratelimit:*`, `companies:*`, `company:*` and `prices:*` keys; `redis-cli ttl <key>` shows the remaining time; `redis-cli del <key>` clears one (for example your own `ratelimit:auth:<ip>` after a lockout). After changing `.env`, run `docker compose up -d api` (a plain restart does not re-read it)
 - Lint: `docker compose exec api ruff check .` (add `--fix` to apply safe fixes)
 - Format: `docker compose exec api ruff format .` (check only: `ruff format --check .`)
 - CI: `.github/workflows/ci.yml` runs `ruff check .`, `ruff format --check .` and `pytest` on pushes to `main`/`master` and on all pull requests
@@ -35,7 +36,7 @@
 | POSTGRES_PASSWORD | Postgres password. Read only by docker compose |
 | POSTGRES_DB | Postgres database name. Read only by docker compose |
 | DATABASE_URL | SQLAlchemy URL, psycopg v3 driver: `postgresql+psycopg://user:password@db:5432/dbname`. Required, no default |
-| REDIS_URL | Redis URL, used as Celery broker and result backend and by the readiness check: `redis://redis:6379/0`. Required, no default |
+| REDIS_URL | Redis URL, used as Celery broker and result backend, by `app/redis_client.py` (cache, rate limiting, readiness check): `redis://redis:6379/0`. Required, no default |
 | JWT_SECRET_KEY | Secret that signs login tokens. Required, no default. Generate with `openssl rand -hex 32` |
 | JWT_ALGORITHM | JWT signing algorithm. Default "HS256" |
 | ACCESS_TOKEN_EXPIRE_MINUTES | Lifetime of an access token in minutes. Default 60 |
@@ -45,7 +46,11 @@
 | FINANCIALS_LOOKBACK_YEARS | Financial fact ingestion stores only periods that ENDED within this many years (cutoff = today minus 365 days per year). Default 6 |
 | PRICE_PROVIDER | Which `PriceProvider` implementation `get_price_provider()` returns. Only `yfinance` is supported; anything else raises `ValueError`. Default "yfinance" |
 | PRICES_LOOKBACK_YEARS | Every price run fetches and re-syncs this many years of daily bars (window = today minus 365 days per year). Default 5 |
+| RATE_LIMIT_AUTH_PER_MINUTE | Max `POST /auth/login` + `POST /auth/register` requests per client IP per 60-second window (one shared counter). Default 10 |
+| RATE_LIMIT_API_PER_MINUTE | Max requests per authenticated user per 60-second window on every other protected route. Default 120 |
+| CACHE_TTL_SECONDS | Lifetime of cached company and price responses. Default 600 |
 | TEST_DATABASE_URL | Used only by pytest (`tests/conftest.py`), not part of `Settings`. Same format as `DATABASE_URL`, but the database name must end with `_test` (`fincopilot_test`). Replaces `DATABASE_URL` during tests. Required to run tests |
+| TEST_REDIS_URL | Used only by pytest, not part of `Settings`. Same format as `REDIS_URL` but it MUST use a non-zero Redis database number (`redis://redis:6379/1`; 0 is the development one). Replaces `REDIS_URL` during tests, and the tests flush this database before every test; the run aborts if the number is 0. Required to run tests |
 
 ## Database tables
 | Table | Purpose | Key columns / constraints | Added in |
@@ -69,15 +74,15 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | Method | Path | Purpose | Auth / role |
 |--------|------|---------|-------------|
 | GET | /health | Returns `{"status": "ok"}` (the app is running) | None |
-| GET | /health/ready | Runs `SELECT 1` and a Redis ping. 200 `{"status": "ready", "database": "ok", "redis": "ok"}`, or 503 with `"error"` for whichever failed | None |
+| GET | /health/ready | Runs `SELECT 1` and a Redis ping (shared client, 1-second timeouts). 200 `{"status": "ready", "database": "ok", "redis": "ok"}`, or 503 with `"error"` for whichever failed | None |
 | POST | /auth/register | Creates a new organization and its first user (admin). 201 with `{access_token, token_type}`. 409 if the email exists, 422 for a bad password | None |
 | POST | /auth/login | Email and password, returns `{access_token, token_type}`. 401 "Invalid email or password" for an unknown email or wrong password | None |
 | GET | /auth/me | The current user | Any logged-in user |
 | POST | /users | Creates a user (admin, analyst or viewer) in the caller's organization. 201. 409 if the email exists anywhere | Admin |
 | GET | /users | Lists users of the caller's organization (no pagination) | Any logged-in user |
 | GET | /users/{user_id} | One user of the caller's organization. 404 "User not found" if missing or in another organization | Any logged-in user |
-| GET | /companies | Paginated company list. Query: `search` (max 50 chars; literal, case-insensitive substring match on ticker or name; exact ticker match first, then by ticker), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`. 422 for invalid values | Any logged-in user |
-| GET | /companies/{ticker} | One company by ticker (case-insensitive), now including `industry`. 404 "Company not found" if unknown | Any logged-in user |
+| GET | /companies | (CACHED) Paginated company list. Query: `search` (max 50 chars; literal, case-insensitive substring match on ticker or name; exact ticker match first, then by ticker), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`. 422 for invalid values | Any logged-in user |
+| GET | /companies/{ticker} | (CACHED) One company by ticker (case-insensitive), now including `industry`. 404 "Company not found" if unknown | Any logged-in user |
 | GET | /companies/{ticker}/filings | A company's stored 10-K and 10-Q filings, newest `filed_on` first. Query: `form_type` (optional, exactly `10-K` or `10-Q`, else 422), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`; each item has `id, accession_number, form_type, filed_on, report_date, fiscal_year, primary_document, document_downloaded` (`raw_path` is not exposed). 404 "Company not found" for an unknown ticker (case-insensitive) | Any logged-in user |
 | POST | /watchlists | Creates a watchlist `{name}` (stripped, 1-100 characters). 201 with `{id, name, created_by, created_at, item_count}`. 409 if the name exists in the organization (any letter case) | Admin or analyst |
 | GET | /watchlists | The organization's watchlists with `item_count`, ordered by name ignoring case. No pagination | Any logged-in user |
@@ -87,7 +92,7 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | POST | /watchlists/{watchlist_id}/companies | Adds a company `{ticker}` (stripped, 1-15 characters, case-insensitive). 201 with the full updated watchlist. 404 "Company not found", 409 "Company is already in this watchlist" | Admin or analyst |
 | DELETE | /watchlists/{watchlist_id}/companies/{ticker} | Removes a company. 204. 404 "Company not found" or "Company is not in this watchlist" | Admin or analyst |
 | GET | /companies/{ticker}/financials | A company's annual financials. Query: `metric` (optional, one of `revenue, net_income, operating_income, gross_profit, total_assets, total_liabilities, shareholders_equity, eps_diluted, operating_cash_flow`, else 422), `years` (1-10, default 5, else 422). Returns `{ticker, name, metrics: [{metric, label, unit, points: [{fiscal_year, period_start, period_end, value (JSON number), concept, accession_number, filed_on}]}]}`. Without `metric`, all nine in that order. Points are the latest `years` periods, OLDEST FIRST; a metric with no data has an empty `points`. 404 "Company not found" for an unknown ticker (case-insensitive) | Any logged-in user |
-| GET | /companies/{ticker}/prices | A company's daily price bars. Query: `days` (1-1825, default 365, else 422; the window is today minus `days` calendar days). Returns `{ticker, name, bars: [{trade_date, open, high, low, close, adj_close, volume}]}`, OLDEST FIRST; prices are JSON floats, volume an int. A company without bars gets an empty list. 404 "Company not found" for an unknown ticker (case-insensitive) | Any logged-in user |
+| GET | /companies/{ticker}/prices | (CACHED) A company's daily price bars. Query: `days` (1-1825, default 365, else 422; the window is today minus `days` calendar days). Returns `{ticker, name, bars: [{trade_date, open, high, low, close, adj_close, volume}]}`, OLDEST FIRST; prices are JSON floats, volume an int. A company without bars gets an empty list. 404 "Company not found" for an unknown ticker (case-insensitive) | Any logged-in user |
 | POST | /alerts | Creates a personal alert `{ticker, alert_type, threshold}` (ticker stripped, 1-15 characters, case-insensitive; `alert_type` one of price_above, price_below, daily_change_pct; threshold > 0 with at most 4 decimals). 201 with `{id, ticker, company_name, alert_type, threshold (JSON number), active, watch_from, created_at}` (never `org_id` or `user_id`). `watch_from` is today (UTC). 404 "Company not found", 409 "Alert limit reached" (50 per user), 409 "You already have this alert" (same company, type and threshold for the same user), 422 for bad values. The route description explains the crossing rule | Any logged-in user (every role) |
 | GET | /alerts | The caller's OWN alerts, newest first, no pagination. Query: `active` (optional bool) | Any logged-in user |
 | GET | /alerts/{alert_id} | One own alert. 404 "Alert not found" if missing, someone else's in the same organization, or in another organization (identical bodies) | Any logged-in user |
@@ -96,6 +101,35 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | GET | /notifications | The caller's OWN notifications, newest first. Query: `unread_only` (default false), `page` (>= 1), `page_size` (1-100, default 20). Returns `{items: [{id, alert_id, ticker, message, trade_date, trigger_value (JSON number), is_read, created_at}], total, page, page_size, unread_count}`; `unread_count` counts ALL the caller's unread notifications, independent of the filter and the page | Any logged-in user |
 | POST | /notifications/{notification_id}/read | Marks one own notification read. 200 with the notification; marking a read one again is fine. 404 "Notification not found" if missing or someone else's (identical bodies) | Any logged-in user |
 | POST | /notifications/read-all | Marks all of the caller's unread notifications read. 200 `{"updated": n}` (0 when nothing was unread) | Any logged-in user |
+
+### Error format
+Every error response is `{"detail": "<string>"}`, nothing else.
+
+| Status | When | Body `detail` |
+|--------|------|---------------|
+| 401 | Missing, invalid or expired token, wrong login (header `WWW-Authenticate: Bearer`) | The message, e.g. "Not authenticated" |
+| 403 | Wrong role | The message, e.g. "Admin role required" |
+| 404 | Missing resource, or another organization's / user's resource. Unknown route | The message, e.g. "Company not found"; "Not Found" for an unknown route |
+| 405 | Wrong method on a known path | "Method Not Allowed" |
+| 409 | Service-level conflict | The message, e.g. "A user with this email already exists" |
+| 409 | Unique-constraint violation (SQLSTATE 23505) that got past the service checks | "This resource already exists" |
+| 422 | Validation error | One string: `"<field>: <message>"` per error joined with `"; "`, e.g. "password: String should have at least 8 characters". The field is the location without its first element (body/query/path) joined with dots; empty field means just the message |
+| 429 | Rate limit exceeded (header `Retry-After: N`, whole seconds, at least 1) | "Too many requests. Try again in N seconds." |
+| 500 | Any unhandled exception, or an IntegrityError that is not a unique violation | "Internal server error" (the exception is only logged, with its traceback) |
+
+### Rate limits (Redis, fixed 60-second window)
+- `POST /auth/login` and `POST /auth/register`: `RATE_LIMIT_AUTH_PER_MINUTE` (10) per client IP (`request.client.host`), one shared counter, key `ratelimit:auth:<ip>`.
+- Every other protected route (users, companies, filings, financials, prices, watchlists, alerts, notifications routers and `GET /auth/me`): `RATE_LIMIT_API_PER_MINUTE` (120) per authenticated user, one counter for all of them, key `ratelimit:user:<user id>`. A 401 request is not counted.
+- Not limited: `/health`, `/health/ready`, `/docs`, `/openapi.json`.
+
+### Cached endpoints (Redis, TTL `CACHE_TTL_SECONDS` = 600, no invalidation)
+| Endpoint | Key |
+|----------|-----|
+| GET /companies | `companies:list:<search stripped and lowercased>:<page>:<page_size>` |
+| GET /companies/{ticker} | `company:<UPPERCASE ticker>` |
+| GET /companies/{ticker}/prices | `prices:<UPPERCASE ticker>:<days>` |
+
+Values are the response schemas as JSON. Filings and financials are not cached. Nothing with an `org_id` or `user_id` is cached.
 
 Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong role: 403 (a viewer gets 403 on every watchlist write, before the watchlist is looked up). Another organization's watchlist: 404 "Watchlist not found", identical to a missing id. Alerts and notifications are different from watchlists: they are personal, so another user's alert is a 404 even inside the same organization, and no role restriction applies.
 
@@ -110,18 +144,20 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC throttle is global) and `beat` sends the schedule (`--schedule /tmp/celerybeat-schedule`, git-ignored as `celerybeat-schedule*`).
 
 ## Key files
-- `app/main.py` — FastAPI app, logging setup, router registration, exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403)
+- `app/main.py` — FastAPI app, logging setup, router registration (every protected router with `dependencies=[Depends(limit_user)]`), exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403, RateLimitError → 429 with `Retry-After`, RequestValidationError → 422 string detail, IntegrityError → 409 for SQLSTATE 23505 else the generic 500, Exception → generic 500)
 - `app/config.py` — `Settings` (pydantic-settings, reads `.env`, ignores extra variables, includes the JWT settings) and the single `settings` object
 - `app/database.py` — sync SQLAlchemy `engine` (`pool_pre_ping=True`), `SessionLocal`, declarative `Base`
-- `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin), `require_editor` (403 unless admin or analyst)
-- `app/exceptions.py` — `NotFoundError`, `ConflictError`, `UnauthorizedError`, `ForbiddenError`
+- `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin), `require_editor` (403 unless admin or analyst), `limit_auth` (per-IP limit for login and register), `limit_user` (per-user limit for protected routes)
+- `app/exceptions.py` — `NotFoundError`, `ConflictError`, `UnauthorizedError`, `ForbiddenError`, `RateLimitError` (has `retry_after`)
+- `app/redis_client.py` — the only module (besides Celery) that talks to Redis: the shared `redis_client` (1-second timeouts, `decode_responses=True`) and three independent functions, `cache_get(key, model)`, `cache_set(key, value)` and `check_rate_limit(scope, identifier, limit, window_seconds)`. `services/companies.py` and `services/prices.py` hold the caching steps
+- `tests/test_error_format.py` (500, 409, 422, 404/405, real concurrent-registration race), `tests/test_rate_limit.py`, `tests/test_cache.py` — the 1.8 tests. `conftest.py` also overrides `REDIS_URL` from `TEST_REDIS_URL` (non-zero database guard) and has two autouse fixtures: `clean_redis` (flushdb) and `high_rate_limits`
 - `app/security.py` — `hash_password`, `verify_password` (bcrypt), `create_access_token`, `decode_access_token` (PyJWT)
 - `app/models/organizations.py`, `users.py` (also `UserRole`), `audit.py` — the 1.1 tables; `companies.py` — the 1.2 table (no `org_id`)
 - `app/schemas/auth.py`, `users.py` — request and response schemas; `check_password_bytes` (72-byte limit) is shared by the register, login and create-user schemas
 - `app/repositories/organizations.py`, `users.py`, `audit.py` — queries; add and flush, never commit
 - `app/services/auth.py` (`register`, `login`) and `users.py` (`create_user`, `list_users`, `get_user`) — business logic, own the commits
 - `app/routes/auth.py`, `users.py` — the 1.1 endpoints
-- `app/routes/health.py` — `GET /health` and `GET /health/ready`
+- `app/routes/health.py` — `GET /health` and `GET /health/ready` (uses the shared Redis client)
 - `app/clients/sec.py` — the SEC client. `sec_get(url, timeout)` is the only function that calls httpx (throttle, User-Agent, retries). `get_company_tickers()` saves the ticker file to `<RAW_DATA_DIR>/sec/company_tickers_exchange.json` and returns dicts with `cik` (padded), `ticker`, `name`, `exchange`. `get_submissions(cik, page_name=None)` saves the raw JSON to `<RAW_DATA_DIR>/sec/submissions/CIK<cik>.json` (or `<page_name>` for an older page) and returns the parsed dict. `download_filing_document(cik, accession_number, primary_document)` saves to `<RAW_DATA_DIR>/sec/filings/<padded cik>/<accession>/<document>` and returns the path relative to `RAW_DATA_DIR`
 - `app/schemas/companies.py`, `app/repositories/companies.py` (`get_by_ticker`, `get_by_cik`, `create`, `search_companies`), `app/services/companies.py` (`list_companies`, `get_company`, `seed_companies`), `app/routes/companies.py` — the 1.2 catalog
 - `scripts/seed_companies.py` — the seed command (flat script with the `TICKERS` list); `scripts/__init__.py` makes `python -m scripts.seed_companies` work
@@ -152,7 +188,7 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - `tests/conftest.py` — sets `DATABASE_URL` from `TEST_DATABASE_URL` before the app is imported, the `_test` name guard, session fixture that creates the test database and runs `alembic upgrade head`, and the `db` and `client` fixtures
 - `tests/test_health.py`, `tests/test_exceptions.py`, `tests/test_database.py` — health endpoints, exception handlers (404, 409, 401, 403 via throwaway routes), pgvector extension exists, rollback isolation of service commits
 - `tests/test_auth.py`, `tests/test_users.py` — registration, login, token rejection, roles, cross-organization isolation. The `register_org` fixture in `conftest.py` registers an organization and returns the admin's auth headers
-- `.github/workflows/ci.yml` — CI: one job with pgvector/Postgres and Redis service containers; lint, format check, pytest
+- `.github/workflows/ci.yml` — CI: one job with pgvector/Postgres and Redis service containers (tests use Redis database 1); lint, format check, pytest
 - `alembic.ini` — Alembic config (no database URL in it)
 - `alembic/env.py` — reads the URL from `settings.DATABASE_URL`, uses `Base.metadata`, imports `app.models`
 - `alembic/versions/69068f636609_enable_pgvector_extension.py` — first migration, `CREATE EXTENSION IF NOT EXISTS vector`
@@ -160,7 +196,7 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - `Dockerfile`, `.dockerignore` — one `python:3.12-slim` image used by api and worker; installs `requirements-dev.txt`
 - `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker` (`--concurrency=1`), `beat`; named volume `postgres_data`
 - `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis, PyJWT, bcrypt, email-validator, httpx, yfinance; yfinance brings pandas and numpy)
-- `.env.example` — template for `.env` (`.env` is git-ignored); includes `TEST_DATABASE_URL`
+- `.env.example` — template for `.env` (`.env` is git-ignored); includes the rate-limit and cache settings, `TEST_DATABASE_URL` and `TEST_REDIS_URL`
 - Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`
 
 ## Design decisions
@@ -265,6 +301,17 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - Deleting an alert deletes its notifications (`ON DELETE CASCADE`, done by the database; the models have no relationship that would make the ORM do it). `notifications` also stores `company_id`, `trigger_value` and a readable `message` as a snapshot, so a notification is complete without joining to the alert (1.7)
 - The list response carries `unread_count` (all of the user's unread notifications, independent of `unread_only` and the page), so the UI can show a badge from one call. Marking a read notification read again is fine (idempotent); reading writes no audit rows. Alert create, update and delete write `alert.create`, `alert.update`, `alert.delete` with the alert id (1.7)
 - Alert and notification responses are built with `from_attributes` from the models, which have small `ticker` / `company_name` properties backed by a `lazy="joined"` company relationship, so listing never runs one query per row and no mapping helper is needed (1.7)
+- One error contract: every error is `{"detail": "<string>"}`. 422 used to be FastAPI's list of error objects; it is now one string (`"<field>: <message>"` joined with `"; "`, using only each error's `msg`, never `input` or `ctx`, which can hold the submitted password), so the frontend can show `detail` directly without checking its type (1.8)
+- The catch-all handler returns a generic 500 and only logs the exception with its traceback; nothing about the error ever reaches the client. Starlette re-raises the exception after sending the response, so uvicorn also logs it once more (1.8)
+- A unique-constraint violation (SQLSTATE 23505, read as `exc.orig.sqlstate` with psycopg 3) that gets past the service checks becomes 409 "This resource already exists". Any other IntegrityError (foreign key, check) is a bug and returns the generic 500. The handler does not roll back: `get_db` closes the session, which discards the failed transaction (1.8)
+- Rate limiting is a fixed 60-second window in Redis: ONE pipeline (MULTI/EXEC) with `INCR`, `EXPIRE ... NX` (sets the expiry only when none exists, so later requests do not extend the window; needs Redis 7) and `TTL`. Trade-off: a client can send up to 2x the limit across a window boundary. The 429 carries `Retry-After` from the key's remaining TTL (at least 1) (1.8)
+- Login and register are limited per client IP (the caller has no identity yet), everything else per authenticated user. Per-user limits are a router-level dependency, so a request rejected with 401 never reaches the counter (1.8)
+- Fail open: if Redis is unreachable the request goes through and a warning is logged. Redis is a protective layer here, so its failure must not take the API down. The `RateLimitError` is raised outside the try block so it is never swallowed (1.8)
+- Caching is TTL only (`CACHE_TTL_SECONDS`), with no invalidation: after an ingestion job or a seed run readers can see old data for up to 10 minutes. This keeps the code to three plain steps in the service (check, compute, store) and the data changes at most daily (1.8)
+- Only shared public data is cached (companies list/detail, prices). Anything with an `org_id` or `user_id` is never cached, so a cache can never leak one tenant's data to another. Errors (404) are never cached, because the 404 is raised before the store step (1.8)
+- Cache values are the response schemas serialized as JSON (`model_dump_json` / `model_validate_json`). An invalid, corrupted or outdated entry (the schema changed) fails validation and counts as a miss, and the fresh value then overwrites it. `get_company` now returns `CompanyResponse` instead of the ORM object so it can be cached (1.8)
+- Tests use a separate Redis database (`TEST_REDIS_URL`, number 1) with a guard that aborts the run for database 0, and flush it before every test, so counters and cache never leak between tests. An autouse fixture raises both rate limits to 1,000,000; the rate-limit tests set small values themselves (1.8)
+- The Redis client has 1-second connect and read timeouts, so an outage makes requests wait at most about a second per Redis call instead of hanging. `/health/ready` uses the same client, so its timeout went from 2 seconds to 1 (1.8)
 
 ## Known issues and tech debt
 - Quarterly (10-Q) values are not stored; only annual 10-K values.
@@ -302,10 +349,8 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - Ingestion catches `KeyError`/`ValueError` per company, but a database error inside a company's step still goes to the broad handler and fails the whole run.
 - If the SEC reassigns a ticker to a different CIK while another seeded row still holds it, the seed's update would hit the unique constraint on `ticker` and fail with nothing committed. Very unlikely for the current large-cap list; not handled.
 - Files written by containers (e.g. `data/raw/sec/`) are owned by root on the host, because the containers run as root. Deleting them from the host needs `sudo`.
-- Two simultaneous registrations (or user creations) with the same email both pass the "email exists" check, and the second then fails on the unique constraint, which surfaces as a 500 instead of a 409. Not handled yet.
 - Login is faster for an unknown email than for a wrong password (bcrypt is skipped when no user is found), so response timing can reveal whether an email has an account even though the error bodies are identical. Fix later by verifying against a dummy hash.
 - Access tokens cannot be revoked before they expire (no logout, refresh or deactivation yet). Deleting a user does invalidate their token, because the user is loaded on every request.
-- Two simultaneous requests creating or renaming to the same watchlist name, or adding the same company to a watchlist, both pass the service check and the second then fails on the unique index or primary key, which surfaces as a 500 instead of a 409 (same class of issue as concurrent registration). Not handled yet.
 - `GET /watchlists` is not paginated (the number of watchlists per organization is expected to be small).
 - Audit rows for `watchlist.add_company` and `watchlist.remove_company` record only the watchlist id, not which company was added or removed.
 - Alerts: in-app only. No email, push or webhook delivery.
@@ -313,10 +358,18 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - Alerts: `close` is split-adjusted, so a stock split after an alert was created shifts the meaning of a price-level threshold (the stored closes are re-synced to the new split basis).
 - Alerts: `watch_from` uses the UTC date. An alert created after the US close but before the 23:00 UTC price job can also fire on that day's bar.
 - Alerts: `GET /alerts` is not paginated (at most 50 alerts per user).
-- Alerts: the 50-alert limit and the duplicate check are not safe against concurrent requests (two simultaneous creates can both pass the check). Changing a threshold through PATCH is not checked against the duplicate rule, so it can create a duplicate of another own alert.
+- Alerts: the 50-alert limit is not safe against concurrent requests (two simultaneous creates can both pass the check; not a unique violation, so the 409 handler does not help). The duplicate-alert check is not backed by a unique constraint either (the `alerts` table has none), so two simultaneous identical creates can both succeed. Changing a threshold through PATCH is not checked against the duplicate rule, so it can create a duplicate of another own alert.
 - Alerts: deleting an alert deletes its notification history. Admins cannot see other users' alerts.
 - Alerts: an outage longer than 30 days (`EVALUATION_WINDOW_DAYS`) loses crossings that happened before the window.
 - Alerts: a crashed evaluation run leaves a stale `running` row that blocks the job for 2 hours (same as the other jobs). The conflict message reads "A alert evaluation ingestion run is already in progress" (the shared helper builds it from the label).
+- Rate limiting uses `request.client.host` and does NOT read `X-Forwarded-For` (anyone can fake it). Behind a reverse proxy every user would share the proxy's IP bucket for login/register: trusted-proxy handling is needed when deployed.
+- There is no per-email login limit, so a distributed attack on ONE account is not stopped; adding one would let attackers lock real users out.
+- Requests with no or an invalid token are not rate limited (they are rejected with 401 before the per-user counter).
+- Fixed-window boundary bursts: up to 2x the limit within a short time across a window boundary.
+- Cached data (companies, prices) can be up to `CACHE_TTL_SECONDS` (10 minutes) old after an ingestion job or a seed run. There is no stampede protection: when an entry expires, simultaneous requests all hit the database.
+- Filings and financials are not cached.
+- With Redis down the API stays up but is unprotected (no rate limits) and every request may wait up to the 1-second timeouts. Celery still needs Redis as its broker.
+- A cached `prices` entry stores a window relative to the day it was computed, so just after midnight a reader can see a window that is one day short for up to 10 minutes.
 - Starlette's `TestClient` warns that using it with `httpx` is deprecated and suggests `httpx2`. We follow the milestone spec (httpx); revisit when Starlette actually removes httpx support.
 - Alembic's generated `script.py.mako` template still uses `Union[...]` typing. Ruff skips `alembic/versions`, so no lint failure, but new migrations keep the old style.
 - `alembic/env.py` calls `fileConfig`, which can disable existing loggers in the test process when `alembic upgrade` runs. Nothing depends on captured app logs yet; keep in mind if a test needs `caplog`.
@@ -332,3 +385,4 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - 1.5 (2026-10-02): `financial_facts` table (one migration, no org_id, NULLS NOT DISTINCT unique constraint), `get_company_facts` in the SEC client with raw saving, `ingest_financial_facts` service (annual 10-K values of a 9-metric allowlist, latest-filed value wins and is updated in place, per-company commits, run guard), Celery task at 03:00 UTC, manual script, `GET /companies/{ticker}/financials`, 31 new tests (177 total). Real run: 34 companies, 1486 facts, 31s, 145 MB; repeat run created and updated 0. Apple FY2024 revenue matches ($391,035M). `CLAUDE.md` section 5 (financial_facts) and milestone 1.5 text updated. Coverage gaps recorded in Known issues.
 - 1.6 (2026-10-02): Part A: extracted `start_run`, `finish_run` and `fail_run` into `services/ingestion.py` and used them in the filings and facts jobs (behavior unchanged, existing tests untouched). Part B: `price_bars` table (one migration, composite primary key, no org_id), `PriceProvider` interface with `YFinanceProvider` and `get_price_provider()`, `ingest_prices` (full-window re-sync every run, so the first run is the backfill; today's bar only after 17:00 Eastern), Celery task at 23:00 UTC Monday to Friday, manual script, `GET /companies/{ticker}/prices`, 40 new tests (217 total). Real run: 34 companies, 42,636 bars, 71s, 5.1 MB of raw CSV; repeat run created 0 bars (but see the `adj_close` drift in Known issues). `CLAUDE.md` sections 2, 5 and 7 updated.
 - 1.7 (2026-10-02): `alerts` and `notifications` tables (one migration; personal, filtered by `org_id` AND `user_id`; notifications cascade with their alert, unique per alert and day), alert CRUD (any role manages own alerts) and notification list / mark-read / read-all endpoints, `evaluate_alerts` service (price_above, price_below, daily_change_pct on the split-adjusted close, crossing semantics, `watch_from`, 30-day window with catch-up, one transaction via the 1.6 run helpers), Celery task chained from `ingest_prices` with `.delay()`, manual script, `people` test fixture, 80 new tests (297 total). Real-data check on NVDA: a 0.5 percent daily-change alert gave 12 notifications for the 14 bars since `watch_from` (the 2 days under 0.5 percent stayed silent), each matching the stored closes; a second run created 0; a price_above 222 alert fired only on its crossing day (2026-09-18) although the close stayed above for 9 more days; the chain ran evaluation after the price task. `CLAUDE.md` domains, section 5 (alerts, notifications), the multi-tenancy rules and milestone 1.7 text updated.
+- 1.8 (2026-10-02): Backend hardening, no new tables or migration. One error contract (`{"detail": "<string>"}`: 422 detail is now one string, generic 500 for unhandled errors, unique violations 409, new 429 with `Retry-After`). Redis fixed-window rate limiting (`limit_auth` per IP for login/register, `limit_user` per user for every protected router) that fails open. Redis TTL caching of `GET /companies`, `/companies/{ticker}` and `/companies/{ticker}/prices`. New `app/redis_client.py`; `/health/ready` uses the shared client; `get_company` returns `CompanyResponse`. 30 new tests (327 total), run against Redis database 1 with a non-zero guard and a flush before every test. `CLAUDE.md` section 2, 4, a new "API conventions" subsection and milestones 1.8/1.9 updated. Real-stack checks: 10 logins pass and the 11th gets 429; per-user limit at 5/min; cache hit served after a SQL change until the key was deleted; with Redis stopped, reads and login still work and `/health/ready` returns 503 naming redis.
