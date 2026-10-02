@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+
+# Raw downloaded data (keep the folder itself in git)
+data/raw/*
+!data/raw/.gitkeep
+
+# Editors
+.vscode/
+.idea/
+*.swp
