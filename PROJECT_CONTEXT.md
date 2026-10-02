@@ -2,8 +2,8 @@
 
 ## Current status
 - Current phase: Phase 1 (Traditional backend)
-- Last completed milestone: 1.2 Company catalog
-- Next milestone: 1.3 Watchlists
+- Last completed milestone: 1.3 Watchlists
+- Next milestone: 1.4 SEC client and filing ingestion
 
 ## How to run
 - Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`) and `SEC_USER_AGENT` (`FinCopilot your.name@example.com`, a real contact email). The app and the tests will not start without them. After changing `.env`, run `docker compose up -d` so the containers pick it up
@@ -46,6 +46,8 @@
 | users | Members of an organization | `id`, `org_id` (FK, indexed), `email` (unique, lowercase), `hashed_password`, `role` (string, CHECK `ck_users_role` in admin/analyst/viewer), `created_at` | 1.1 |
 | audit_logs | Who did what | `id`, `org_id` (FK, indexed), `user_id` (FK), `action` (e.g. `user.create`), `entity_id` (nullable), `created_at` | 1.1 |
 | companies | Shared public catalog of US-listed companies (no `org_id`) | `id` (identity), `ticker` (unique), `cik` (unique, 10-character zero-padded string, e.g. `0000320193`), `name`, `exchange` (nullable), `created_at`. No extra indexes: the unique constraints are enough for ~34 rows. Sector arrives in 1.4 | 1.2 |
+| watchlists | A named list of companies a team tracks (private, shared by the whole organization) | `id` (identity), `org_id` (FK, indexed), `created_by` (FK to users), `name` (100), `created_at`. UNIQUE INDEX `uq_watchlists_org_id_lower_name` on `(org_id, lower(name))`, so names are unique per organization ignoring letter case | 1.3 |
+| watchlist_items | A company in a watchlist | PRIMARY KEY `(watchlist_id, company_id)` (no id column, no other indexes), `watchlist_id` FK with `ON DELETE CASCADE`, `company_id` FK to companies with no cascade, `added_at` | 1.3 |
 
 The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_version` table. The `fincopilot_test` database has the same schema, created by the tests. All `created_at` columns are `timestamptz` with server default `now()`.
 
@@ -62,8 +64,15 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 | GET | /users/{user_id} | One user of the caller's organization. 404 "User not found" if missing or in another organization | Any logged-in user |
 | GET | /companies | Paginated company list. Query: `search` (max 50 chars; literal, case-insensitive substring match on ticker or name; exact ticker match first, then by ticker), `page` (>= 1, default 1), `page_size` (1-100, default 20). Returns `{items, total, page, page_size}`. 422 for invalid values | Any logged-in user |
 | GET | /companies/{ticker} | One company by ticker (case-insensitive). 404 "Company not found" if unknown | Any logged-in user |
+| POST | /watchlists | Creates a watchlist `{name}` (stripped, 1-100 characters). 201 with `{id, name, created_by, created_at, item_count}`. 409 if the name exists in the organization (any letter case) | Admin or analyst |
+| GET | /watchlists | The organization's watchlists with `item_count`, ordered by name ignoring case. No pagination | Any logged-in user |
+| GET | /watchlists/{watchlist_id} | One watchlist with its `companies` (full company objects, sorted by ticker). 404 "Watchlist not found" if missing or in another organization | Any logged-in user |
+| PATCH | /watchlists/{watchlist_id} | Renames it `{name}`. 200 with the summary. 409 only if ANOTHER watchlist has the name; the same name or a case-only change is allowed | Admin or analyst |
+| DELETE | /watchlists/{watchlist_id} | Deletes it and its items (database cascade); companies stay in the catalog. 204 | Admin or analyst |
+| POST | /watchlists/{watchlist_id}/companies | Adds a company `{ticker}` (stripped, 1-15 characters, case-insensitive). 201 with the full updated watchlist. 404 "Company not found", 409 "Company is already in this watchlist" | Admin or analyst |
+| DELETE | /watchlists/{watchlist_id}/companies/{ticker} | Removes a company. 204. 404 "Company not found" or "Company is not in this watchlist" | Admin or analyst |
 
-Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong role: 403.
+Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong role: 403 (a viewer gets 403 on every watchlist write, before the watchlist is looked up). Another organization's watchlist: 404 "Watchlist not found", identical to a missing id.
 
 ## Background jobs
 | Task | Schedule | What it does |
@@ -74,7 +83,7 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `app/main.py` — FastAPI app, logging setup, router registration, exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403)
 - `app/config.py` — `Settings` (pydantic-settings, reads `.env`, ignores extra variables, includes the JWT settings) and the single `settings` object
 - `app/database.py` — sync SQLAlchemy `engine` (`pool_pre_ping=True`), `SessionLocal`, declarative `Base`
-- `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin)
+- `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin), `require_editor` (403 unless admin or analyst)
 - `app/exceptions.py` — `NotFoundError`, `ConflictError`, `UnauthorizedError`, `ForbiddenError`
 - `app/security.py` — `hash_password`, `verify_password` (bcrypt), `create_access_token`, `decode_access_token` (PyJWT)
 - `app/models/organizations.py`, `users.py` (also `UserRole`), `audit.py` — the 1.1 tables; `companies.py` — the 1.2 table (no `org_id`)
@@ -89,6 +98,9 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - `alembic/versions/bf7faefe32ae_create_companies_table.py` — companies table (autogenerated, reviewed)
 - `tests/fixtures/company_tickers_exchange.json` — 8-company fixture in the real columnar structure (includes GOOGL and GOOG sharing a CIK, and a null exchange); `tests/test_sec_client.py`, `tests/test_companies_seed.py`, `tests/test_companies.py`. The `sec_rows` fixture in `conftest.py` gives the parsed fixture (real client code, download mocked)
 - `app/workers/celery_app.py` — the Celery app (`celery_app`), Redis broker and result backend
+- `app/models/watchlists.py` (`Watchlist` and `WatchlistItem`, with the functional unique index declared after the class), `app/schemas/watchlists.py`, `app/repositories/watchlists.py` (reads take `org_id`; the item reads join through `watchlists.org_id`; the writes at the bottom rely on the service having checked ownership), `app/services/watchlists.py`, `app/routes/watchlists.py` — the 1.3 watchlists
+- `alembic/versions/ab4b8dd0de03_create_watchlists_tables.py` — watchlists and watchlist_items (autogenerated, reviewed; it already renders the `lower(name)` index correctly)
+- `tests/test_watchlists.py` — 48 tests: auth, roles, names, list/detail, rename, delete, items, cross-organization 404 (parametrized, with a direct database check that organization A's items did not change). The `seeded` fixture (seeds 7 catalog companies with the SEC client mocked) now lives in `tests/conftest.py`, moved from `test_companies.py` because two test files use it
 - `app/models/__init__.py` — imports every model file so Alembic sees it. Convention: every new model file is imported here
 - `pyproject.toml` — tool config only: ruff (line length 100, py312, rules E/F/I/B/UP, excludes `alembic/versions` and `*.md`, `fastapi.Depends` treated as immutable for B008, E402 allowed in `tests/conftest.py`) and pytest (`testpaths`, `pythonpath`)
 - `requirements-dev.txt` — `-r requirements.txt` plus pinned pytest and ruff (httpx is in `requirements.txt` now and also serves `TestClient`)
@@ -150,6 +162,15 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - Pagination uses `page` and `page_size` and returns the total, computed from the same filter as the page. There is no generic pagination utility (1.2)
 - Search is a literal (`icontains(..., autoescape=True)`, so `%` and `_` are not wildcards), case-insensitive substring match on ticker or name. An exact ticker match (ignoring case) sorts first, then by ticker. Text that is empty after stripping means no filter (1.2)
 - Any logged-in role (admin, analyst, viewer) can read the catalog (1.2)
+- Watchlists are shared team resources: any admin or analyst of the organization can change ANY of its watchlists, not only the ones they created. `created_by` is only a record (1.3)
+- Viewers are read-only. `require_editor` (admin or analyst) guards every write on organization data; it is a plain dependency like `require_admin`, not a role factory (1.3)
+- Watchlist names are unique per organization ignoring letter case, enforced by a functional unique index on `(org_id, lower(name))`. The service also checks `get_by_name` first so the user gets a clean 409 (1.3)
+- A rename is a conflict only when ANOTHER watchlist holds the name, so renaming to the same name or changing only the letter case of its own name ("tech" to "Tech") is allowed (1.3)
+- `watchlist_items` has a composite primary key `(watchlist_id, company_id)` and no id column. The FK to watchlists is `ON DELETE CASCADE`; the FK to companies has no cascade, so deleting a watchlist never touches the catalog (1.3)
+- Item reads are scoped through the watchlist's `org_id` (a join to `watchlists`). The item writes (`add_item`, `remove_item`, `delete_watchlist`) do not take `org_id`; they rely on the service having loaded the watchlist with `get_by_id(org_id)` first, and the cross-organization tests prove nothing changes (1.3)
+- Services load the watchlist (org-scoped) BEFORE looking at the company, so a caller from another organization always gets "Watchlist not found" and learns nothing about companies (1.3)
+- Companies are added and removed by ticker (case-insensitive, uppercased in the service), the same key as `GET /companies/{ticker}`. The add route returns the full updated watchlist (1.3)
+- Audit rows for watchlist actions (`watchlist.create`, `.rename`, `.delete`, `.add_company`, `.remove_company`) always use the watchlist id as `entity_id` (1.3)
 
 ## Known issues and tech debt
 - The SEC client has no throttling or retries yet (one request per seed run). Milestone 1.4 adds the 5 requests per second throttle and retries when the client makes many requests.
@@ -158,6 +179,9 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - Two simultaneous registrations (or user creations) with the same email both pass the "email exists" check, and the second then fails on the unique constraint, which surfaces as a 500 instead of a 409. Not handled yet.
 - Login is faster for an unknown email than for a wrong password (bcrypt is skipped when no user is found), so response timing can reveal whether an email has an account even though the error bodies are identical. Fix later by verifying against a dummy hash.
 - Access tokens cannot be revoked before they expire (no logout, refresh or deactivation yet). Deleting a user does invalidate their token, because the user is loaded on every request.
+- Two simultaneous requests creating or renaming to the same watchlist name, or adding the same company to a watchlist, both pass the service check and the second then fails on the unique index or primary key, which surfaces as a 500 instead of a 409 (same class of issue as concurrent registration). Not handled yet.
+- `GET /watchlists` is not paginated (the number of watchlists per organization is expected to be small).
+- Audit rows for `watchlist.add_company` and `watchlist.remove_company` record only the watchlist id, not which company was added or removed.
 - Starlette's `TestClient` warns that using it with `httpx` is deprecated and suggests `httpx2`. We follow the milestone spec (httpx); revisit when Starlette actually removes httpx support.
 - Alembic's generated `script.py.mako` template still uses `Union[...]` typing. Ruff skips `alembic/versions`, so no lint failure, but new migrations keep the old style.
 - `alembic/env.py` calls `fileConfig`, which can disable existing loggers in the test process when `alembic upgrade` runs. Nothing depends on captured app logs yet; keep in mind if a test needs `caplog`.
@@ -168,3 +192,4 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 - 0.3 (2026-10-02): pytest against a real Postgres test database (`fincopilot_test`, safety guard, savepoint rollback per test, `db` and `client` fixtures), 5 tests, ruff config (E/F/I/B/UP), `requirements-dev.txt` installed in the Docker image, GitHub Actions workflow with Postgres and Redis service containers.
 - 1.1 (2026-10-02): Organizations, users and audit_logs tables (one migration), bcrypt + JWT security module, register/login/me and admin-only user creation, org-scoped user list/detail with 404 for other organizations, 401/403 handlers, 34 tests including cross-organization isolation and the db-fixture rollback test.
 - 1.2 (2026-10-02): `companies` table (one migration, no org_id), SEC client for the ticker file with raw-file saving, idempotent seed script for 34 tickers (matches by CIK, validates before writing), paginated and searchable `GET /companies` and `GET /companies/{ticker}` for any role, 23 new tests (57 total). `SEC_USER_AGENT` and `RAW_DATA_DIR` settings; httpx moved to runtime requirements.
+- 1.3 (2026-10-02): `watchlists` and `watchlist_items` tables (one migration, case-insensitive unique name per organization via a functional index, composite primary key with cascade), `require_editor` dependency, 7 org-scoped watchlist endpoints (viewers read-only, other organizations get 404), audit rows, 48 new tests (105 total). `CLAUDE.md` data model line and a roles rule updated. `seeded` test fixture moved to `conftest.py`.

@@ -171,7 +171,7 @@ Shared public data (no `org_id`; every organization reads the same rows):
 
 Private organization data (every table has `org_id`):
 - `organizations`, `users` (org_id, email, role: admin / analyst / viewer)
-- `watchlists`, `watchlist_items` (watchlist_id + company_id unique)
+- `watchlists` (org_id, created_by, name; name unique per organization, case-insensitive), `watchlist_items` (primary key is watchlist_id + company_id; deleting a watchlist cascades to its items)
 - `alerts` (user_id, company_id, condition, active), `notifications` (alert_id, sent_at, is_read)
 - `audit_logs` (org_id, user_id, action, entity_id)
 - `chat_sessions`, `chat_messages`, `citations` (message_id, chunk_id, score)
@@ -188,6 +188,7 @@ Tables are created only in the milestone that needs them.
 - Every repository function that reads or writes private data takes `org_id` as a required argument and filters by it.
 - Accessing another organization's resource returns 404 (not 403), so existence is not leaked.
 - Every org-owned feature has a test proving organization A cannot see organization B's data.
+- Roles: viewers are read-only on organization data; admin and analyst can create and change it (the `require_editor` dependency); managing users is admin-only.
 - Agent tools enforce `org_id` the same way.
 
 ### External data

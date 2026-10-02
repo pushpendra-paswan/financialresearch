@@ -2,21 +2,8 @@ from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-
-from app.clients import sec
-from app.services import companies as company_service
 
 RegisterOrg = Callable[[str, str], dict[str, str]]
-
-TICKERS = ["AAPL", "MSFT", "MA", "V", "AMZN", "GOOGL", "JNJ"]
-
-
-@pytest.fixture
-def seeded(db: Session, monkeypatch: pytest.MonkeyPatch, sec_rows: list[dict]) -> None:
-    # Seed through the service with the SEC client mocked
-    monkeypatch.setattr(sec, "get_company_tickers", lambda: sec_rows)
-    company_service.seed_companies(db, TICKERS)
 
 
 @pytest.fixture

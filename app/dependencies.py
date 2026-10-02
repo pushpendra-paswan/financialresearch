@@ -43,3 +43,10 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.admin:
         raise ForbiddenError("Admin role required")
     return current_user
+
+
+def require_editor(current_user: User = Depends(get_current_user)) -> User:
+    # Viewers are read-only; admins and analysts can create and change organization data
+    if current_user.role not in (UserRole.admin, UserRole.analyst):
+        raise ForbiddenError("Admin or analyst role required")
+    return current_user

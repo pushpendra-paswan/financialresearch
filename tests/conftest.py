@@ -36,6 +36,7 @@ from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
+from app.services import companies as company_service
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -125,3 +126,11 @@ def sec_rows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[dict]:
     monkeypatch.setattr(httpx, "get", fake_get)
     monkeypatch.setattr(settings, "RAW_DATA_DIR", str(tmp_path))
     return sec.get_company_tickers()
+
+
+@pytest.fixture
+def seeded(db: Session, monkeypatch: pytest.MonkeyPatch, sec_rows: list[dict]) -> None:
+    # Seeds the catalog through the service with the SEC client mocked. These are the tickers
+    # from the fixture file that tests use.
+    monkeypatch.setattr(sec, "get_company_tickers", lambda: sec_rows)
+    company_service.seed_companies(db, ["AAPL", "MSFT", "MA", "V", "AMZN", "GOOGL", "JNJ"])
