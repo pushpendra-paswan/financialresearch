@@ -25,4 +25,10 @@ celery_app.conf.beat_schedule = {
         "task": "ingest_financial_facts",
         "schedule": crontab(hour=3, minute=0),
     },
+    # 23:00 UTC is after the US close in both summer (20:00 UTC) and winter (21:00 UTC) time, so
+    # the day's final bar is available. Monday to Friday only: the market is closed at weekends
+    "ingest-prices-daily": {
+        "task": "ingest_prices",
+        "schedule": crontab(hour=23, minute=0, day_of_week="mon-fri"),
+    },
 }

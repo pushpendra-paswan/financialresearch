@@ -21,15 +21,44 @@ STORED_FORM_TYPES = {"10-K", "10-Q"}
 STALE_RUN_AFTER = timedelta(hours=2)
 
 
-def ingest_filings(db: Session) -> IngestionRun:
-    # 1. Do not start while another run is in progress
+# The three helpers below are shared by every ingestion job (filings, financial facts, prices).
+# They only do the run bookkeeping; the jobs themselves stay long and sequential.
+def start_run(db: Session, job_type: str, label: str) -> IngestionRun:
+    # Do not start while another run of the same job is in progress
     running_since = datetime.now(UTC) - STALE_RUN_AFTER
-    if ingestion_repository.get_recent_running_run(db, JOB_TYPE, running_since):
-        raise ConflictError("A filing ingestion run is already in progress")
+    if ingestion_repository.get_recent_running_run(db, job_type, running_since):
+        raise ConflictError(f"A {label} ingestion run is already in progress")
 
-    # 2. Record the run and commit at once, so it is visible while the job is still working
-    run = ingestion_repository.create_run(db, JOB_TYPE)
+    # Record the run and commit at once, so it is visible while the job is still working
+    run = ingestion_repository.create_run(db, job_type)
     db.commit()
+    return run
+
+
+def finish_run(db: Session, run: IngestionRun, failed_count: int, message: str) -> IngestionRun:
+    # "partial" means at least one company or document failed
+    if failed_count:
+        run.status = IngestionStatus.partial
+    else:
+        run.status = IngestionStatus.success
+    run.finished_at = datetime.now(UTC)
+    run.message = message
+    db.commit()
+    return run
+
+
+def fail_run(db: Session, run: IngestionRun, error: Exception) -> None:
+    # Whatever went wrong, the run row must not stay "running". The caller re-raises the error
+    db.rollback()
+    run.status = IngestionStatus.failed
+    run.finished_at = datetime.now(UTC)
+    run.error = f"{type(error).__name__}: {error}"
+    db.commit()
+
+
+def ingest_filings(db: Session) -> IngestionRun:
+    # 1-2. Guard against an overlapping run and record this one
+    run = start_run(db, JOB_TYPE, "filing")
 
     # The one broad except in the project: whatever goes wrong, the run row must not stay
     # "running" forever. It records the failure and re-raises.
@@ -140,27 +169,18 @@ def ingest_filings(db: Session) -> IngestionRun:
                     documents_failed += 1
 
         # 6. Finish the run. "partial" means at least one company or document failed
-        if failed_tickers or documents_failed:
-            run.status = IngestionStatus.partial
-        else:
-            run.status = IngestionStatus.success
-        run.finished_at = datetime.now(UTC)
-        run.message = (
+        message = (
             f"Companies processed: {companies_processed}, companies failed: {len(failed_tickers)}, "
             f"new filings: {new_filings}, documents downloaded: {documents_downloaded}, "
             f"documents failed: {documents_failed}"
         )
         if failed_tickers:
-            run.message += f". Failed companies: {', '.join(failed_tickers)}"
-        db.commit()
+            message += f". Failed companies: {', '.join(failed_tickers)}"
+        finish_run(db, run, len(failed_tickers) + documents_failed, message)
         logger.info("Filing ingestion finished (%s): %s", run.status, run.message)
         return run
     except Exception as error:
         # 7. Record the failure and re-raise it
-        db.rollback()
-        run.status = IngestionStatus.failed
-        run.finished_at = datetime.now(UTC)
-        run.error = f"{type(error).__name__}: {error}"
-        db.commit()
+        fail_run(db, run, error)
         logger.exception("Filing ingestion failed")
         raise

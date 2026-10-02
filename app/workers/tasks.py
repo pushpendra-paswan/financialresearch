@@ -4,6 +4,7 @@ from app.database import SessionLocal
 from app.exceptions import ConflictError
 from app.services import financials as financial_service
 from app.services import ingestion as ingestion_service
+from app.services import prices as price_service
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -42,4 +43,21 @@ def ingest_financial_facts() -> str | None:
     logger.info(
         "Financial facts ingestion run %d finished (%s): %s", run.id, run.status, run.message
     )
+    return f"{run.status}: {run.message}"
+
+
+# No Celery retries: the next daily run catches up
+@celery_app.task(name="ingest_prices")
+def ingest_prices() -> str | None:
+    db = SessionLocal()
+    try:
+        run = price_service.ingest_prices(db)
+    except ConflictError as error:
+        # A skipped run is not a failure
+        logger.warning("Price ingestion skipped: %s", error.message)
+        return None
+    finally:
+        db.close()
+
+    logger.info("Price ingestion run %d finished (%s): %s", run.id, run.status, run.message)
     return f"{run.status}: {run.message}"

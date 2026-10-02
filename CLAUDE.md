@@ -33,6 +33,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - LangChain 1.x for Phase 2 RAG: `langchain-core`, `langchain-text-splitters`, and the provider integration packages for the chosen chat model and embeddings. Section 6 defines how LangChain must be used.
 - pgvector Python package for the vector column in SQLAlchemy models
 - LangGraph for the agent (Phase 3)
+- yfinance for daily prices (the first `PriceProvider` implementation; an unofficial Yahoo Finance wrapper, fine for a personal learning project, not for commercial use)
 - Embedding model, LLM provider and reranker: chosen at the milestone where they are first needed (embeddings in 2.2, chat model in 2.4, reranker in 2.5), and recorded in `PROJECT_CONTEXT.md`
 - Langfuse for LLM tracing (Phase 3)
 - pytest, ruff
@@ -165,7 +166,7 @@ Shared public data (no `org_id`; every organization reads the same rows):
 - `companies` (ticker unique, cik unique as a 10-character zero-padded string, name, exchange, industry = the SEC's SIC description; there is no GICS sector)
 - `filings` (company_id, accession_number unique, form_type, filed_on, report_date, fiscal_year, primary_document, raw_path relative to RAW_DATA_DIR)
 - `financial_facts` (company_id, concept, unit, period_start nullable, period_end, value, fiscal_year = year of period_end, form_type, accession_number, filed_on; one row per period holding the value from the latest-filed 10-K; unique on company_id + concept + unit + period_start + period_end; annual data only)
-- `price_bars` (company_id, trade_date, open, high, low, close, volume; unique on company_id + trade_date)
+- `price_bars` (company_id + trade_date as the composite primary key, open, high, low, close = split-adjusted, adj_close = split- and dividend-adjusted, volume)
 - `document_chunks` (filing_id, company_id, section, fiscal_year, content, embedding)
 - `ingestion_runs` (job_type, status running/success/partial/failed, started_at, finished_at, message, error)
 
@@ -256,7 +257,7 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: running the job twice creates no duplicates and filings appear on the company endpoint.
 - **1.5 Financial facts**: financial_facts table and ingestion of ANNUAL (10-K) us-gaap values for a fixed allowlist of concepts (revenue, net income, assets, EPS, etc.).
   Done when: an endpoint returns a company's yearly revenue for the last 5 years.
-- **1.6 Prices**: `PriceProvider` interface with one implementation, price_bars table, backfill script, daily end-of-day job.
+- **1.6 Prices**: `PriceProvider` interface with one implementation (yfinance), price_bars table, a daily job that re-syncs the full lookback window (the first run is the backfill).
   Done when: price history is returned, and swapping providers needs only a new class.
 - **1.7 Alerts and notifications**: alert CRUD, evaluation job after the daily price job, notifications.
   Done when: a test with fixture prices triggers exactly one notification.

@@ -6,6 +6,7 @@ from app.models import (  # noqa: F401
     financials,
     ingestion,
     organizations,
+    prices,
     users,
     watchlists,
 )

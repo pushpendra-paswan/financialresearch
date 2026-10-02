@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 import httpx
@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.clients import sec
 from app.config import settings
-from app.exceptions import ConflictError, NotFoundError
+from app.exceptions import NotFoundError
 from app.models.financials import FinancialFact
-from app.models.ingestion import IngestionRun, IngestionStatus
+from app.models.ingestion import IngestionRun
 from app.repositories import companies as company_repository
 from app.repositories import financials as financial_repository
-from app.repositories import ingestion as ingestion_repository
 from app.schemas.financials import FinancialPoint, FinancialsResponse, MetricName, MetricSeries
+from app.services import ingestion as ingestion_service
 
 logger = logging.getLogger(__name__)
 
@@ -48,22 +48,15 @@ METRICS: dict[MetricName, tuple[str, str, list[str]]] = {
 }
 
 JOB_TYPE = "financial_facts"
-# A "running" row older than this is treated as left behind by a crashed run
-STALE_RUN_AFTER = timedelta(hours=2)
 # A duration value counts as annual when the period is this many days long (52 and 53 week years)
 MIN_PERIOD_DAYS = 350
 MAX_PERIOD_DAYS = 380
 
 
 def ingest_financial_facts(db: Session) -> IngestionRun:
-    # 1. Do not start while another facts run is in progress. A filings run does not block this
-    running_since = datetime.now(UTC) - STALE_RUN_AFTER
-    if ingestion_repository.get_recent_running_run(db, JOB_TYPE, running_since):
-        raise ConflictError("A financial facts ingestion run is already in progress")
-
-    # 2. Record the run and commit at once, so it is visible while the job is still working
-    run = ingestion_repository.create_run(db, JOB_TYPE)
-    db.commit()
+    # 1-2. Guard against an overlapping facts run (a filings run does not block this) and record
+    # this one
+    run = ingestion_service.start_run(db, JOB_TYPE, "financial facts")
 
     # The one broad except of this job: whatever goes wrong, the run row must not stay
     # "running" forever. It records the failure and re-raises.
@@ -184,28 +177,19 @@ def ingest_financial_facts(db: Session) -> IngestionRun:
                 continue
 
         # 5. Finish the run. "partial" means at least one company failed
-        if failed_tickers:
-            run.status = IngestionStatus.partial
-        else:
-            run.status = IngestionStatus.success
-        run.finished_at = datetime.now(UTC)
-        run.message = (
+        message = (
             f"Companies processed: {companies_processed}, companies failed: {len(failed_tickers)}, "
             f"companies without facts: {companies_without_facts}, "
             f"facts created: {facts_created}, facts updated: {facts_updated}"
         )
         if failed_tickers:
-            run.message += f". Failed companies: {', '.join(failed_tickers)}"
-        db.commit()
+            message += f". Failed companies: {', '.join(failed_tickers)}"
+        ingestion_service.finish_run(db, run, len(failed_tickers), message)
         logger.info("Financial facts ingestion finished (%s): %s", run.status, run.message)
         return run
     except Exception as error:
         # 6. Record the failure and re-raise it
-        db.rollback()
-        run.status = IngestionStatus.failed
-        run.finished_at = datetime.now(UTC)
-        run.error = f"{type(error).__name__}: {error}"
-        db.commit()
+        ingestion_service.fail_run(db, run, error)
         logger.exception("Financial facts ingestion failed")
         raise
 

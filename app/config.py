@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     FILINGS_LOOKBACK_YEARS: int = 3
     # Financial fact ingestion stores only periods that ended within this many years
     FINANCIALS_LOOKBACK_YEARS: int = 6
+    # Which PriceProvider implementation to use (see clients/prices.py). Only "yfinance" for now
+    PRICE_PROVIDER: str = "yfinance"
+    # Every price run fetches this many years of daily bars (365 days per year)
+    PRICES_LOOKBACK_YEARS: int = 5
 
     # No defaults on purpose: connection URLs must come from the environment
     DATABASE_URL: str
