@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alerts - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Alerts</h1>
+    <p class="muted">An alert fires on the day the daily close crosses your level. If the condition is already true when you create the alert, it waits for the next crossing. Alerts are personal and only you see them.</p>
+    <div id="message" aria-live="polite"></div>
+
+    <section class="card" aria-labelledby="create-heading">
+      <h2 id="create-heading">Create alert</h2>
+      <div id="create-message" aria-live="polite"></div>
+      <form id="create-form" class="toolbar" method="post">
+        <div class="field">
+          <label for="alert-ticker">Ticker</label>
+          <input id="alert-ticker" type="text" maxlength="15" autocapitalize="characters" required>
+        </div>
+        <div class="field">
+          <label for="alert-type">Alert type</label>
+          <select id="alert-type">
+            <option value="price_above">Price crosses above</option>
+            <option value="price_below">Price crosses below</option>
+            <option value="daily_change_pct">Daily move of at least (%)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="alert-threshold">Threshold</label>
+          <input id="alert-threshold" type="number" min="0.0001" step="any" required>
+        </div>
+        <button type="submit">Create</button>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="list-heading">
+      <h2 id="list-heading">Your alerts</h2>
+      <div id="list-message" aria-live="polite"></div>
+      <div id="alerts-table" class="scroll"></div>
+    </section>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="alerts.js"></script>
+</body>
+</html>

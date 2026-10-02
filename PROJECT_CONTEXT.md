@@ -1,14 +1,15 @@
 # PROJECT_CONTEXT.md
 
 ## Current status
-- Current phase: Phase 1 (Traditional backend)
-- Last completed milestone: 1.8 Backend hardening
-- Next milestone: 1.9 Frontend
+- Current phase: Phase 2 (RAG), not started (Phase 1 is complete)
+- Last completed milestone: 1.9 Frontend
+- Next milestone: 2.1 Filing parsing
 
 ## How to run
 - Create local settings: `cp .env.example .env`, then set `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`) and `SEC_USER_AGENT` (`FinCopilot your.name@example.com`, a real contact email). The app and the tests will not start without them. After changing `.env`, run `docker compose up -d` so the containers pick it up
 - Start services: `docker compose up --build` (db, redis, api on port 8000, worker, beat; add `-d` to run in the background)
 - Run migrations: `docker compose exec api alembic upgrade head` (roll back one step: `docker compose exec api alembic downgrade -1`)
+- Open the UI: http://localhost:8000/ (redirects to http://localhost:8000/app/, the login page). Register a new organization there, or log in with an existing account. Frontend files are served straight from `frontend/`, so edits show after a browser reload (a hard reload or DevTools "Disable cache" if an old JavaScript module is still cached)
 - Check it: `curl localhost:8000/health` returns `{"status":"ok"}`; `curl localhost:8000/health/ready` checks database and Redis
 - Check the worker: `docker compose exec worker celery -A app.workers.celery_app inspect ping`
 - psql shell: `docker compose exec db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'`
@@ -75,6 +76,8 @@ The `vector` (pgvector) extension is also enabled, plus Alembic's `alembic_versi
 |--------|------|---------|-------------|
 | GET | /health | Returns `{"status": "ok"}` (the app is running) | None |
 | GET | /health/ready | Runs `SELECT 1` and a Redis ping (shared client, 1-second timeouts). 200 `{"status": "ready", "database": "ok", "redis": "ok"}`, or 503 with `"error"` for whichever failed | None |
+| GET | / | 307 redirect to `/app/` (the only route defined in `main.py`; hidden from the OpenAPI schema) | None |
+| GET | /app/... | The static frontend (`frontend/` folder, `StaticFiles(html=True)`): `/app/` is `index.html`. An unknown file is 404 `{"detail": "Not Found"}`. Not rate limited, not cached | None |
 | POST | /auth/register | Creates a new organization and its first user (admin). 201 with `{access_token, token_type}`. 409 if the email exists, 422 for a bad password | None |
 | POST | /auth/login | Email and password, returns `{access_token, token_type}`. 401 "Invalid email or password" for an unknown email or wrong password | None |
 | GET | /auth/me | The current user | Any logged-in user |
@@ -133,6 +136,21 @@ Values are the response schemas as JSON. Filings and financials are not cached. 
 
 Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong role: 403 (a viewer gets 403 on every watchlist write, before the watchlist is looked up). Another organization's watchlist: 404 "Watchlist not found", identical to a missing id. Alerts and notifications are different from watchlists: they are personal, so another user's alert is a 404 even inside the same organization, and no role restriction applies.
 
+## Frontend pages
+All pages are in `frontend/`, open at `/app/<page>.html`, load `style.css`, and (except `index`) call `requireLogin()` and `renderNav()` first, which costs 2 requests (`GET /auth/me`, `GET /notifications?page_size=1` for the badge). "Editors" are admin and analyst; viewers get the same pages without the edit controls. The server enforces roles.
+
+| Page | Purpose | Endpoints used | Edit controls shown to |
+|------|---------|----------------|------------------------|
+| `index.html` | Login and "create a new organization" (registering makes you admin). `?expired=1` shows the session-expired message | POST /auth/login, POST /auth/register, GET /auth/me (only when a token exists) | everyone |
+| `companies.html` | Search (`?search=`) and paginated catalog (`?page=`), 20 per page | GET /companies | none (read only) |
+| `company.html?ticker=` | Header, SVG price chart (1M/6M/1Y/5Y), financials table (5 years, 9 metrics), filings with a form-type filter and pager, add to watchlist, create alert | GET /companies/{ticker}, /prices?days=, /financials?years=5, /filings?form_type=&page=&page_size=10; GET /watchlists; POST /watchlists/{id}/companies; POST /alerts | add to watchlist: editors; create alert: every role |
+| `watchlists.html?id=` | List on the left, the selected watchlist on the right (companies, add by ticker, remove, rename, delete) | GET /watchlists, GET /watchlists/{id}, POST /watchlists, PATCH and DELETE /watchlists/{id}, POST /watchlists/{id}/companies, DELETE /watchlists/{id}/companies/{ticker} | editors |
+| `alerts.html` | The user's own alerts: create, switch on/off, edit threshold, delete | GET /alerts, POST /alerts, PATCH /alerts/{id}, DELETE /alerts/{id} | every role (alerts are personal) |
+| `notifications.html` | Own notifications with `?unread_only=true&page=`, mark read, mark all read, updates the nav badge from `unread_count` | GET /notifications, POST /notifications/{id}/read, POST /notifications/read-all | every role |
+| `team.html` | Member list (email, role, created) | GET /users, POST /users | create-user form: admin only |
+
+API requests on page load (including the 2 for the nav): index 0 (1 if a token exists), companies 3, company 6 for a viewer and 7 for an editor (each range change adds 1, each filings filter or page adds 1), watchlists 3 (4 with `?id=`), alerts 3, notifications 3, team 3. The rate limit is 120 per minute per user.
+
 ## Background jobs
 | Task | Schedule | What it does |
 |------|----------|--------------|
@@ -144,7 +162,7 @@ Missing, invalid or expired token: 401 with `WWW-Authenticate: Bearer`. Wrong ro
 Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC throttle is global) and `beat` sends the schedule (`--schedule /tmp/celerybeat-schedule`, git-ignored as `celerybeat-schedule*`).
 
 ## Key files
-- `app/main.py` — FastAPI app, logging setup, router registration (every protected router with `dependencies=[Depends(limit_user)]`), exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403, RateLimitError → 429 with `Retry-After`, RequestValidationError → 422 string detail, IntegrityError → 409 for SQLSTATE 23505 else the generic 500, Exception → generic 500)
+- `app/main.py` — FastAPI app, logging setup, router registration (every protected router with `dependencies=[Depends(limit_user)]`), the `/app` static mount of `frontend/` (absolute path built with `pathlib`, mounted after the routers) and `GET /` (redirect to `/app/`), exception handlers (NotFoundError → 404, ConflictError → 409, UnauthorizedError → 401 with `WWW-Authenticate: Bearer`, ForbiddenError → 403, RateLimitError → 429 with `Retry-After`, RequestValidationError → 422 string detail, IntegrityError → 409 for SQLSTATE 23505 else the generic 500, Exception → generic 500)
 - `app/config.py` — `Settings` (pydantic-settings, reads `.env`, ignores extra variables, includes the JWT settings) and the single `settings` object
 - `app/database.py` — sync SQLAlchemy `engine` (`pool_pre_ping=True`), `SessionLocal`, declarative `Base`
 - `app/dependencies.py` — `get_db` (yields a session, always closes it), `get_current_user` (bearer token → user, 401 otherwise), `require_admin` (403 unless admin), `require_editor` (403 unless admin or analyst), `limit_auth` (per-IP limit for login and register), `limit_user` (per-user limit for protected routes)
@@ -197,7 +215,11 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - `docker-compose.yml` — services `db` (pgvector/pgvector:pg16), `redis` (7-alpine), `api`, `worker` (`--concurrency=1`), `beat`; named volume `postgres_data`
 - `requirements.txt` — pinned dependencies (fastapi, uvicorn[standard], pydantic-settings, sqlalchemy, alembic, psycopg[binary], celery, redis, PyJWT, bcrypt, email-validator, httpx, yfinance; yfinance brings pandas and numpy)
 - `.env.example` — template for `.env` (`.env` is git-ignored); includes the rate-limit and cache settings, `TEST_DATABASE_URL` and `TEST_REDIS_URL`
-- Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `frontend/`, `data/raw/`
+- `frontend/style.css` — the one stylesheet (light theme, system fonts, 1000px content width, `.message.error/.success`, `.badge`, `.up/.down`, `.scroll`, `.sr-only`, works at 375px)
+- `frontend/common.js` — the only shared module, exactly eight exports: `api` (the only `fetch`, bearer token, 15-second timeout, error messages from `detail`, 401-with-token redirect to `index.html?expired=1`), `saveToken`, `hasToken` (the only token access besides logout and the 401 handling inside this file), `requireLogin`, `renderNav`, `renderPager`, `el`, `showMessage`
+- `frontend/<page>.html` + `frontend/<page>.js` for `index`, `companies`, `company`, `watchlists`, `alerts`, `notifications`, `team` — one HTML file (CSP meta first in `<head>`, `<header id="nav">`, `<main>` with `<div id="message">`, footer notice, one module script) and one ES module per page. `company.js` is the largest (about 500 lines): price chart, financials, filings, add to watchlist, create alert
+- `tests/test_frontend.py` — 62 tests: static serving (pages, CSS and JS content types, `/` redirect 307, JSON 404, path traversal, `/health` and `/docs` not shadowed) and static guards over the files in `frontend/` (no `innerHTML` and similar, `fetch` and storage only in `common.js`, CSP meta, no inline script, `style=` or event handlers, no external addresses, no `@import`, exactly the eight exports, imports only from `./common.js`)
+- Placeholder folders (`.gitkeep`): `scripts/`, `evals/`, `data/raw/` (`frontend/` has real files now)
 
 ## Design decisions
 - The repository root is the project root (no `fin-copilot/` subfolder) — the repo was created in this directory (0.1)
@@ -312,6 +334,22 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - Cache values are the response schemas serialized as JSON (`model_dump_json` / `model_validate_json`). An invalid, corrupted or outdated entry (the schema changed) fails validation and counts as a miss, and the fresh value then overwrites it. `get_company` now returns `CompanyResponse` instead of the ORM object so it can be cached (1.8)
 - Tests use a separate Redis database (`TEST_REDIS_URL`, number 1) with a guard that aborts the run for database 0, and flush it before every test, so counters and cache never leak between tests. An autouse fixture raises both rate limits to 1,000,000; the rate-limit tests set small values themselves (1.8)
 - The Redis client has 1-second connect and read timeouts, so an outage makes requests wait at most about a second per Redis call instead of hanging. `/health/ready` uses the same client, so its timeout went from 2 seconds to 1 (1.8)
+- The frontend is a multi-page app: one HTML file and one ES module per page, plus one shared `common.js`. The shared file is justified because every page needs the same API call, token handling, nav and pager, and nothing else is shared; there is no build step, no npm and no external hosts (1.9)
+- JavaScript is loaded as ES modules (`<script type="module">`): pages `import` from `./common.js`, so there are no globals and no script ordering problems; top-level `await` is used for the start-up code of each page (1.9)
+- The JWT is kept in `localStorage` under `fincopilot_token`, because a multi-page app navigates between real pages and needs the login to survive that. Mitigations: no `innerHTML` and similar (enforced by a test), a Content-Security-Policy meta tag on every page (`default-src 'self'`, so no inline script and no external script can run), no external scripts or fonts, and all text set with `textContent` (1.9)
+- `fetch` and every token access live only in `common.js`, enforced by a test, so there is exactly one place to audit and to change (1.9)
+- A 401 on a request that carried a token means the session ended: `api()` removes the token and redirects to `index.html?expired=1`, and returns a promise that never resolves so the page code stops. A 401 without a token (wrong login) is shown like any other error (1.9)
+- Page state lives in the URL, not in JavaScript: search and page are GET forms and query parameters (`companies.html?search=&page=`, `notifications.html?unread_only=true&page=`, `watchlists.html?id=`, `company.html?ticker=`), so reload, back and sharing a link work. Changing a page reloads the page (1.9)
+- The price chart is hand-written SVG (created with `createElementNS`, no library): the strict CSP, no dependencies and nothing to maintain. It plots the split-adjusted `close` (not `adj_close`, same reason as alerts). The x axis is the trading-day index (bars equally spaced), so weekends and holidays leave no gaps. The y axis is the min to max of the closes plus 5 percent (1 either side for a flat series) (1.9)
+- Date strings like `2024-06-07` are never turned into `Date` objects (a date-only string is parsed as UTC and shifts the day in some time zones); they are shown as received. Only timestamps with a time (`created_at`) use `new Date(...)` (1.9)
+- Hiding controls by role (viewers see no watchlist editing and no create-user form) is UX only; the server enforces permissions and its message (for example a 403) is shown as it is (1.9)
+- Alert thresholds are sent as the typed string, never as a JavaScript float, so `0.5` reaches the server as `0.5` and the server's Decimal validation decides (1.9)
+- `window.prompt` and `window.confirm` are used on purpose for rename, edit threshold and delete, to keep the code small (1.9)
+- The "View on SEC.gov" link is built on the client from stored fields (`https://www.sec.gov/Archives/edgar/data/<cik without leading zeros>/<accession without dashes>/<primary_document>`, each part URL-encoded); the API never supplies a URL, and `raw_path` is not exposed (1.9)
+- Every section of a page loads independently and shows its own error, so one failing request never blanks a page; the company page loads the header first (an unknown ticker stops the other sections) and the rest in parallel (1.9)
+- Forms use `method="post"`, so if JavaScript failed to load the browser would not put a password in the URL (1.9)
+- Static files are not rate limited and not cached by Redis: `StaticFiles` is mounted after the routers, outside the `limit_user` dependency, and no middleware, CORS or headers were added (1.9)
+- Small local closures inside `loadPrices` (`xFor`, `yFor`, `showNearest`) map data to chart coordinates and handle pointer events; they are the one place where helper-like functions exist, because the chart needs them in many spots (1.9)
 
 ## Known issues and tech debt
 - Quarterly (10-Q) values are not stored; only annual 10-K values.
@@ -370,6 +408,15 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - Filings and financials are not cached.
 - With Redis down the API stays up but is unprotected (no rate limits) and every request may wait up to the 1-second timeouts. Celery still needs Redis as its broker.
 - A cached `prices` entry stores a window relative to the day it was computed, so just after midnight a reader can see a window that is one day short for up to 10 minutes.
+- Frontend: the token cannot be revoked. Logout only deletes it from the browser; it stays valid until it expires (60 minutes by default).
+- Frontend: `localStorage` is readable by any script running on the page, so XSS protection depends on the rules in CLAUDE.md "Frontend rules" (no `innerHTML`, the CSP meta tag, no external scripts).
+- Frontend: there are no automated browser tests, only the static guards in `tests/test_frontend.py` and the manual browser checklist. `node` is not installed, so JavaScript was only syntax-checked with `gjs` (SpiderMonkey) during 1.9.
+- Frontend: `prompt()` and `confirm()` are not polished UI. The chart has no zoom and no volume bars. Light theme only, English only (no internationalization).
+- Frontend: the financials table assumes one point per fiscal year per metric (if two points shared a fiscal year, the later one would win).
+- Frontend: the watchlists and alerts lists are not paginated, because the API does not paginate them.
+- Frontend: cached shared data (companies, prices) can be up to 10 minutes old, and the UI does not say so.
+- Frontend: the SEC document link can land on the SEC's own viewer (iXBRL) instead of the raw file.
+- Frontend: a browser may cache old JavaScript modules during development; use DevTools "Disable cache" or a hard reload.
 - Starlette's `TestClient` warns that using it with `httpx` is deprecated and suggests `httpx2`. We follow the milestone spec (httpx); revisit when Starlette actually removes httpx support.
 - Alembic's generated `script.py.mako` template still uses `Union[...]` typing. Ruff skips `alembic/versions`, so no lint failure, but new migrations keep the old style.
 - `alembic/env.py` calls `fileConfig`, which can disable existing loggers in the test process when `alembic upgrade` runs. Nothing depends on captured app logs yet; keep in mind if a test needs `caplog`.
@@ -386,3 +433,4 @@ Docker services: `worker` runs with `--concurrency=1` (one process, so the SEC t
 - 1.6 (2026-10-02): Part A: extracted `start_run`, `finish_run` and `fail_run` into `services/ingestion.py` and used them in the filings and facts jobs (behavior unchanged, existing tests untouched). Part B: `price_bars` table (one migration, composite primary key, no org_id), `PriceProvider` interface with `YFinanceProvider` and `get_price_provider()`, `ingest_prices` (full-window re-sync every run, so the first run is the backfill; today's bar only after 17:00 Eastern), Celery task at 23:00 UTC Monday to Friday, manual script, `GET /companies/{ticker}/prices`, 40 new tests (217 total). Real run: 34 companies, 42,636 bars, 71s, 5.1 MB of raw CSV; repeat run created 0 bars (but see the `adj_close` drift in Known issues). `CLAUDE.md` sections 2, 5 and 7 updated.
 - 1.7 (2026-10-02): `alerts` and `notifications` tables (one migration; personal, filtered by `org_id` AND `user_id`; notifications cascade with their alert, unique per alert and day), alert CRUD (any role manages own alerts) and notification list / mark-read / read-all endpoints, `evaluate_alerts` service (price_above, price_below, daily_change_pct on the split-adjusted close, crossing semantics, `watch_from`, 30-day window with catch-up, one transaction via the 1.6 run helpers), Celery task chained from `ingest_prices` with `.delay()`, manual script, `people` test fixture, 80 new tests (297 total). Real-data check on NVDA: a 0.5 percent daily-change alert gave 12 notifications for the 14 bars since `watch_from` (the 2 days under 0.5 percent stayed silent), each matching the stored closes; a second run created 0; a price_above 222 alert fired only on its crossing day (2026-09-18) although the close stayed above for 9 more days; the chain ran evaluation after the price task. `CLAUDE.md` domains, section 5 (alerts, notifications), the multi-tenancy rules and milestone 1.7 text updated.
 - 1.8 (2026-10-02): Backend hardening, no new tables or migration. One error contract (`{"detail": "<string>"}`: 422 detail is now one string, generic 500 for unhandled errors, unique violations 409, new 429 with `Retry-After`). Redis fixed-window rate limiting (`limit_auth` per IP for login/register, `limit_user` per user for every protected router) that fails open. Redis TTL caching of `GET /companies`, `/companies/{ticker}` and `/companies/{ticker}/prices`. New `app/redis_client.py`; `/health/ready` uses the shared client; `get_company` returns `CompanyResponse`. 30 new tests (327 total), run against Redis database 1 with a non-zero guard and a flush before every test. `CLAUDE.md` section 2, 4, a new "API conventions" subsection and milestones 1.8/1.9 updated. Real-stack checks: 10 logins pass and the 11th gets 429; per-user limit at 5/min; cache hit served after a SQL change until the key was deleted; with Redis stopped, reads and login still work and `/health/ready` returns 503 naming redis.
+- 1.9 (2026-10-02): Frontend, no new tables, endpoints, libraries or migration. Plain HTML/CSS/ES-module pages in `frontend/` (login/registration, companies, company page with SVG price chart, financials table, filings, add to watchlist and create alert, watchlists, alerts, notifications, team) with one shared `common.js` (eight exports), served by FastAPI at `/app` (`StaticFiles(html=True)`, mounted after the routers) plus `GET /` redirecting to `/app/`. 62 new tests in `tests/test_frontend.py` (serving and static guards; 389 total). Every frontend API call was replayed against the real app and matched the routes and schemas; JavaScript syntax was checked with `gjs` (no `node`). `CLAUDE.md` sections 2, 3 (3.7 JavaScript style), 4, 6 (Frontend rules) and milestone 1.9 updated. The browser checklist is for the developer to run by hand.

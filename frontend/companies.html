@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Companies - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Companies</h1>
+    <form id="search-form" class="toolbar" method="get" action="companies.html">
+      <div class="field">
+        <label for="search">Search by ticker or name</label>
+        <input id="search" name="search" type="search" maxlength="50">
+      </div>
+      <button type="submit">Search</button>
+    </form>
+    <div id="message" aria-live="polite"></div>
+    <div id="companies-section">
+      <div id="companies-table" class="scroll"></div>
+      <div id="companies-pager" class="pager"></div>
+    </div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="companies.js"></script>
+</body>
+</html>

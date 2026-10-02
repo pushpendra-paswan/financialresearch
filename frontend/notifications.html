@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notifications - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Notifications</h1>
+    <div class="toolbar">
+      <form id="filter-form" class="toolbar" method="get" action="notifications.html">
+        <div class="field-inline">
+          <input id="unread-only" name="unread_only" type="checkbox" value="true">
+          <label for="unread-only">Unread only</label>
+        </div>
+        <button type="submit" class="secondary">Apply</button>
+      </form>
+      <button id="read-all-button" type="button">Mark all read</button>
+    </div>
+    <div id="message" aria-live="polite"></div>
+    <div id="notifications-list"></div>
+    <div id="notifications-pager" class="pager"></div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="notifications.js"></script>
+</body>
+</html>

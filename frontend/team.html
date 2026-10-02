@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Team</h1>
+    <div id="message" aria-live="polite"></div>
+
+    <section class="card" aria-labelledby="members-heading">
+      <h2 id="members-heading">Members</h2>
+      <div id="members-message" aria-live="polite"></div>
+      <div id="members-table" class="scroll"></div>
+    </section>
+
+    <section id="create-section" class="card" aria-labelledby="create-heading" hidden>
+      <h2 id="create-heading">Add a team member</h2>
+      <div id="create-message" aria-live="polite"></div>
+      <form id="create-form" method="post">
+        <div class="field">
+          <label for="user-email">Email</label>
+          <input id="user-email" type="email" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="user-password">Password</label>
+          <input id="user-password" type="password" autocomplete="new-password" minlength="8" required>
+          <span class="muted">At least 8 characters.</span>
+        </div>
+        <div class="field">
+          <label for="user-role">Role</label>
+          <select id="user-role">
+            <option value="analyst">analyst</option>
+            <option value="viewer">viewer</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        <p><button type="submit">Create user</button></p>
+      </form>
+    </section>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="team.js"></script>
+</body>
+</html>

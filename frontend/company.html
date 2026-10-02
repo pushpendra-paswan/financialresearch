@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Company - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <div id="message" aria-live="polite"></div>
+
+    <section id="header-section" class="card">
+      <h1 id="company-title">Company</h1>
+      <div id="company-details"></div>
+    </section>
+
+    <div id="company-sections" hidden>
+      <section class="card" aria-labelledby="price-heading">
+        <h2 id="price-heading">Price</h2>
+        <div class="toolbar" role="group" aria-label="Price range">
+          <button type="button" class="secondary" data-days="30" aria-pressed="false">1M</button>
+          <button type="button" class="secondary" data-days="180" aria-pressed="false">6M</button>
+          <button type="button" class="secondary" data-days="365" aria-pressed="true">1Y</button>
+          <button type="button" class="secondary" data-days="1825" aria-pressed="false">5Y</button>
+        </div>
+        <div id="price-message" aria-live="polite"></div>
+        <p id="price-summary"></p>
+        <p id="price-readout" class="chart-readout"></p>
+        <div id="price-chart"></div>
+        <p class="muted">Close is split-adjusted, not adjusted for dividends.</p>
+      </section>
+
+      <section class="card" aria-labelledby="financials-heading">
+        <h2 id="financials-heading">Financials</h2>
+        <div id="financials-message" aria-live="polite"></div>
+        <div id="financials-table" class="scroll"></div>
+        <p class="muted">Annual figures from 10-K filings; fiscal year is the calendar year of the period end.</p>
+      </section>
+
+      <section class="card" aria-labelledby="filings-heading">
+        <h2 id="filings-heading">Filings</h2>
+        <div class="toolbar">
+          <div class="field">
+            <label for="form-type">Form type</label>
+            <select id="form-type">
+              <option value="">All</option>
+              <option value="10-K">10-K</option>
+              <option value="10-Q">10-Q</option>
+            </select>
+          </div>
+        </div>
+        <div id="filings-message" aria-live="polite"></div>
+        <div id="filings-table" class="scroll"></div>
+        <div id="filings-pager" class="pager"></div>
+      </section>
+
+      <section id="watchlist-section" class="card" aria-labelledby="watchlist-heading" hidden>
+        <h2 id="watchlist-heading">Add to watchlist</h2>
+        <div id="watchlist-message" aria-live="polite"></div>
+        <form id="watchlist-form" class="toolbar" method="post">
+          <div class="field">
+            <label for="watchlist-select">Watchlist</label>
+            <select id="watchlist-select" required></select>
+          </div>
+          <button type="submit">Add</button>
+        </form>
+        <p id="watchlist-empty" hidden></p>
+      </section>
+
+      <section class="card" aria-labelledby="alert-heading">
+        <h2 id="alert-heading">Create alert</h2>
+        <div id="alert-message" aria-live="polite"></div>
+        <form id="alert-form" class="toolbar" method="post">
+          <div class="field">
+            <label for="alert-type">Alert type</label>
+            <select id="alert-type">
+              <option value="price_above">Price crosses above</option>
+              <option value="price_below">Price crosses below</option>
+              <option value="daily_change_pct">Daily move of at least (%)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="alert-threshold">Threshold</label>
+            <input id="alert-threshold" type="number" min="0.0001" step="any" required>
+          </div>
+          <button type="submit">Create</button>
+        </form>
+        <p class="muted">Alerts are personal and only you see them.</p>
+      </section>
+    </div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="company.js"></script>
+</body>
+</html>

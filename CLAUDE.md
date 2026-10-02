@@ -38,7 +38,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - Langfuse for LLM tracing (Phase 3)
 - pytest, ruff
 - Docker Compose for local development
-- Frontend: plain HTML, CSS and JavaScript served by FastAPI as static files. No frontend framework.
+- Frontend: plain HTML, CSS and JavaScript (ES modules) served by FastAPI under /app; no framework, no build step, no external hosts.
 
 Do not add a new library without stating why in the milestone plan.
 
@@ -103,6 +103,9 @@ def create_watchlist(db, org_id, user_id, data):
     return _finalize(db, watchlist)
 ```
 
+### 3.7 JavaScript style
+Frontend code follows the same rules as the Python code: plain, sequential code with short comments that say why. Functions exist only as event handlers or as section loaders (`loadX`, which fetch and render; re-render by calling the loader again). Shared code lives only in `frontend/common.js`; there is no state-management layer, no classes and no helper chains.
+
 ---
 
 ## 4. Project structure
@@ -118,7 +121,7 @@ fin-copilot/
 ├── .env.example
 ├── alembic/
 ├── app/
-│   ├── main.py            # FastAPI app, router registration, exception handlers
+│   ├── main.py            # FastAPI app, router registration, exception handlers, /app static mount, GET / redirect to /app/
 │   ├── config.py          # Settings from environment variables
 │   ├── database.py        # Engine and session
 │   ├── redis_client.py    # The only module that talks to Redis directly; cache and rate-limit helpers
@@ -135,7 +138,10 @@ fin-copilot/
 │   └── agent/             # Phase 3 only: agent tools and LangGraph graph
 ├── scripts/               # One-off commands: seed companies, backfill prices
 ├── evals/                 # Phase 2/3 evaluation questions, scripts and results
-├── frontend/              # Plain HTML, CSS, JS
+├── frontend/              # Plain HTML, CSS, JS (ES modules), served at /app
+│   ├── style.css          # The one stylesheet
+│   ├── common.js          # Shared code: api(), token access, nav, pager, el(), showMessage()
+│   └── <page>.html + <page>.js   # One pair per page: index, companies, company, watchlists, alerts, notifications, team
 ├── data/raw/              # Raw downloaded SEC/price files (git-ignored)
 └── tests/
 ```
@@ -211,6 +217,15 @@ Tables are created only in the milestone that needs them.
 - Rate limits are enforced with Redis dependencies: `limit_auth` for login and register, `limit_user` for every protected route. A new router must be included with `dependencies=[Depends(limit_user)]`.
 - Unique-constraint violations that slip past the service checks become 409.
 
+### Frontend rules
+- (a) Text is put on the page only through `textContent` (and `createElement`, `append`, `setAttribute` for non-style attributes). `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval` and `new Function` are forbidden; `tests/test_frontend.py` enforces it.
+- (b) Every HTML page has the Content-Security-Policy meta tag as the first element in `<head>`, and no inline script, no `style` attributes and no inline event handler attributes.
+- (c) `fetch` and the login token (`localStorage`) are used only in `frontend/common.js`.
+- (d) Hiding controls by role is UX only; the server enforces permissions and its error messages are shown as they are.
+- (e) Never construct a `Date` from a date-only string (like `2024-06-07`); show such values as received.
+- (f) No polling, no timers, no auto-refresh.
+- (g) Cached shared data may be up to `CACHE_TTL_SECONDS` old, and the UI does not hide that.
+
 ### AI behaviour (Phases 2 and 3)
 - Answers use only retrieved filing text. Every factual claim has a citation stored in `citations`.
 - When the retrieved evidence is weak, the answer says it does not know.
@@ -271,8 +286,8 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: a test with fixture prices triggers exactly one notification.
 - **1.8 Backend hardening**: consistent error responses, Redis rate limiting, Redis caching of shared reads.
   Done when: the limits, the cache and the error format are proven by tests and by the manual checks.
-- **1.9 Frontend**: plain HTML/CSS/JS pages (login, watchlists, company page with price chart and filings, notifications, alerts).
-  Done when: the full Phase 1 flow works in the browser.
+- **1.9 Frontend**: login/registration, companies, company page (SVG price chart, financials table, filings, add to watchlist, create alert), watchlists, alerts, notifications, team.
+  Done when: tests pass and the browser checklist passes.
 
 ### Phase 2: RAG
 - **2.1 Filing parsing**: clean filing HTML from raw storage with BeautifulSoup and extract key 10-K sections (Risk Factors, MD&A first). Output one LangChain `Document` per section with metadata (company_id, ticker, filing_id, form_type, fiscal_year, section).

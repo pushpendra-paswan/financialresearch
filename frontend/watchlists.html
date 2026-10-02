@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchlists - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Watchlists</h1>
+    <div id="message" aria-live="polite"></div>
+
+    <div class="two-columns">
+      <section class="card" aria-labelledby="list-heading">
+        <h2 id="list-heading">Your team's watchlists</h2>
+        <div id="list-message" aria-live="polite"></div>
+        <ul id="watchlist-list" class="plain-list"></ul>
+        <form id="create-form" method="post" hidden>
+          <div class="field">
+            <label for="create-name">New watchlist name</label>
+            <input id="create-name" type="text" maxlength="100" required>
+          </div>
+          <p><button type="submit">Create watchlist</button></p>
+        </form>
+        <p id="read-only-note" class="muted" hidden>Your role is read-only: you can view watchlists but not change them.</p>
+      </section>
+
+      <section class="card" aria-labelledby="detail-heading">
+        <h2 id="detail-heading">Watchlist</h2>
+        <div id="detail-message" aria-live="polite"></div>
+        <p id="detail-empty">Select a watchlist</p>
+        <div id="detail-body" hidden>
+          <h3 id="detail-name"></h3>
+          <div id="detail-actions" class="toolbar" hidden>
+            <button id="rename-button" type="button" class="secondary">Rename</button>
+            <button id="delete-button" type="button" class="danger">Delete</button>
+          </div>
+          <div id="detail-table" class="scroll"></div>
+          <form id="add-form" class="toolbar" method="post" hidden>
+            <div class="field">
+              <label for="add-ticker">Add a company by ticker</label>
+              <input id="add-ticker" type="text" maxlength="15" autocapitalize="characters" required>
+            </div>
+            <button type="submit">Add</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="watchlists.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Financial Research Copilot</h1>
+    <div id="message" aria-live="polite"></div>
+
+    <div class="two-columns">
+      <section class="card">
+        <h2>Log in</h2>
+        <form id="login-form" method="post">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <p><button type="submit">Log in</button></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Create a new organization</h2>
+        <p class="muted">You become the admin of the new organization. Colleagues are added by an admin on the Team page.</p>
+        <form id="register-form" method="post">
+          <div class="field">
+            <label for="register-organization">Organization name</label>
+            <input id="register-organization" name="organization_name" type="text" maxlength="200" required>
+          </div>
+          <div class="field">
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="register-password">Password</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            <span class="muted">At least 8 characters.</span>
+          </div>
+          <p><button type="submit">Create organization</button></p>
+        </form>
+      </section>
+    </div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="index.js"></script>
+</body>
+</html>

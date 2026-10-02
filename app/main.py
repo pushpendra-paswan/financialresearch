@@ -1,8 +1,10 @@
 import logging
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
@@ -50,6 +52,17 @@ app.include_router(notifications.router, dependencies=limited)
 app.include_router(prices.router, dependencies=limited)
 app.include_router(users.router, dependencies=limited)
 app.include_router(watchlists.router, dependencies=limited)
+
+# The browser UI: plain files from the frontend folder, served under /app. Mounted AFTER the
+# routers, and no API route starts with /app. Not rate limited and not cached.
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+
+# The one route outside routes/: the site root sends browsers to the UI
+@app.get("/", include_in_schema=False)
+def redirect_to_app() -> RedirectResponse:
+    return RedirectResponse("/app/")
 
 
 # Services raise custom exceptions; they are turned into HTTP responses here
