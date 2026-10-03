@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 1500
     CHUNK_OVERLAP: int = 200
 
+    # Retrieval (2.3): each search (vector and full-text) returns this many candidates, the fused
+    # list keeps RETRIEVAL_TOP_K chunks, and RRF_K is the standard reciprocal rank fusion constant
+    RETRIEVAL_CANDIDATES_K: int = 20
+    RETRIEVAL_TOP_K: int = 5
+    RRF_K: int = 60
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10
