@@ -4,7 +4,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
+import openai
 import pytest
+from langchain_core.embeddings import DeterministicFakeEmbedding
+from pydantic import Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
@@ -53,6 +56,7 @@ from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
+from app.rag import llm
 from app.redis_client import redis_client
 from app.services import companies as company_service
 
@@ -89,6 +93,29 @@ def high_rate_limits(monkeypatch: pytest.MonkeyPatch) -> None:
     # The rest of the suite must never hit a limit. Rate-limit tests set small values themselves.
     monkeypatch.setattr(settings, "RATE_LIMIT_AUTH_PER_MINUTE", 1_000_000)
     monkeypatch.setattr(settings, "RATE_LIMIT_API_PER_MINUTE", 1_000_000)
+
+
+class SpyEmbeddings(DeterministicFakeEmbedding):
+    # Deterministic fake vectors that also record every embed_documents call (the number of texts
+    # in each) and can fail on cue, so tests can count API calls and simulate an OpenAI error
+    calls: list[int] = Field(default_factory=list)
+    fail_when_text_contains: str | None = None
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self.calls.append(len(texts))
+        if self.fail_when_text_contains and any(self.fail_when_text_contains in t for t in texts):
+            request = httpx.Request("POST", "https://example.invalid/embeddings")
+            raise openai.APIConnectionError(request=request)
+        return super().embed_documents(texts)
+
+
+@pytest.fixture(autouse=True)
+def fake_embeddings(monkeypatch: pytest.MonkeyPatch) -> SpyEmbeddings:
+    # No test may ever reach OpenAI: every test gets fake 1536-dimension embeddings. Tests can
+    # ask for this fixture to inspect the calls or to change its size
+    fake = SpyEmbeddings(size=1536)
+    monkeypatch.setattr(llm, "get_embeddings", lambda: fake)
+    return fake
 
 
 @pytest.fixture

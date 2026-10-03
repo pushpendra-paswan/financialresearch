@@ -1,7 +1,9 @@
 import logging
 
+from app.config import settings
 from app.database import SessionLocal
 from app.exceptions import ConflictError
+from app.rag import chunking
 from app.services import alerts as alert_service
 from app.services import financials as financial_service
 from app.services import ingestion as ingestion_service
@@ -25,6 +27,12 @@ def ingest_filings() -> str | None:
         db.close()
 
     logger.info("Filing ingestion run %d finished (%s): %s", run.id, run.status, run.message)
+
+    # Chain the embedding of new filings: it runs after this task, because the worker has one
+    # process (--concurrency=1). Only reached when the service returned normally. Filings that
+    # are already chunked are skipped without an API call, and if this chain is ever lost the
+    # next day's run catches up
+    embed_filings.delay()
     return f"{run.status}: {run.message}"
 
 
@@ -84,4 +92,27 @@ def evaluate_alerts() -> str | None:
         db.close()
 
     logger.info("Alert evaluation run %d finished (%s): %s", run.id, run.status, run.message)
+    return f"{run.status}: {run.message}"
+
+
+# No Celery retries: the next run catches up. It has no beat entry: it is chained after
+# ingest_filings
+@celery_app.task(name="embed_filings")
+def embed_filings() -> str | None:
+    # An empty key means embeddings are switched off, which is not a failure: no run is created
+    if not settings.OPENAI_API_KEY:
+        logger.warning("embeddings disabled: OPENAI_API_KEY not set")
+        return None
+
+    db = SessionLocal()
+    try:
+        run = chunking.embed_filings(db)
+    except ConflictError as error:
+        # A skipped run is not a failure
+        logger.warning("Embedding skipped: %s", error.message)
+        return None
+    finally:
+        db.close()
+
+    logger.info("Embedding run %d finished (%s): %s", run.id, run.status, run.message)
     return f"{run.status}: {run.message}"

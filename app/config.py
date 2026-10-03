@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     RAG_TICKERS: str = "AAPL,NVDA"
     RAG_LOOKBACK_YEARS: int = 2
 
+    # Embeddings (2.2). The key is optional so the app and the tests start without it: an empty
+    # key means "embeddings disabled". The vector size (1536) is a constant in
+    # app/models/chunks.py, not a setting, because changing it needs a migration
+    OPENAI_API_KEY: str = ""
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    # Texts per embedding API request (this is the batch size, not the text chunk size)
+    EMBEDDING_BATCH_SIZE: int = 100
+    # Chunk size and overlap, in characters, for splitting each filing section
+    CHUNK_SIZE: int = 1500
+    CHUNK_OVERLAP: int = 200
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10

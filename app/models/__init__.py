@@ -2,6 +2,7 @@
 from app.models import (  # noqa: F401
     alerts,
     audit,
+    chunks,
     companies,
     filings,
     financials,

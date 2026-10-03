@@ -31,11 +31,11 @@ This is a learning and portfolio project. The developer must be able to read and
 - Pydantic v2 + pydantic-settings
 - JWT auth (PyJWT) + bcrypt password hashing
 - httpx for external HTTP calls
-- LangChain 1.x for Phase 2 RAG: `langchain-core`, `langchain-text-splitters`, `langchain-community` (only `TextLoader` and `Html2TextTransformer`, with `html2text`, to load and convert filing HTML; the package is sunset and archived, so it is pinned and used for nothing else; it also installs `langchain-classic`, which is never imported), and the provider integration packages for the chosen chat model and embeddings. Section 6 defines how LangChain must be used.
+- LangChain 1.x for Phase 2 RAG: `langchain-core`, `langchain-text-splitters`, `langchain-community` (only `TextLoader` and `Html2TextTransformer`, with `html2text`, to load and convert filing HTML; the package is sunset and archived, so it is pinned and used for nothing else; it also installs `langchain-classic`, which is never imported), and `langchain-openai` (the OpenAI embeddings now, the OpenAI chat model from 2.4; it brings `openai`, which `app/rag/chunking.py` imports for its exception, and `tiktoken`, which the embedding script uses for token estimates). Section 6 defines how LangChain must be used.
 - pgvector Python package for the vector column in SQLAlchemy models
 - LangGraph for the agent (Phase 3)
 - yfinance for daily prices (the first `PriceProvider` implementation; an unofficial Yahoo Finance wrapper, fine for a personal learning project, not for commercial use)
-- Embedding model, LLM provider and reranker: chosen at the milestone where they are first needed (embeddings in 2.2, chat model in 2.4, reranker in 2.5), and recorded in `PROJECT_CONTEXT.md`
+- Embeddings: OpenAI `text-embedding-3-small` (1536 dimensions) through LangChain's `OpenAIEmbeddings`. Chat model: OpenAI `gpt-5.4-mini` (used from 2.4). Reranker: still open, chosen in 2.5 and recorded in `PROJECT_CONTEXT.md`
 - Langfuse for LLM tracing (Phase 3)
 - pytest, ruff
 - Docker Compose for local development
@@ -178,7 +178,7 @@ Shared public data (no `org_id`; every organization reads the same rows):
 - `filings` (company_id, accession_number unique, form_type, filed_on, report_date, fiscal_year, primary_document, raw_path relative to RAW_DATA_DIR)
 - `financial_facts` (company_id, concept, unit, period_start nullable, period_end, value, fiscal_year = year of period_end, form_type, accession_number, filed_on; one row per period holding the value from the latest-filed 10-K; unique on company_id + concept + unit + period_start + period_end; annual data only)
 - `price_bars` (company_id + trade_date as the composite primary key, open, high, low, close = split-adjusted, adj_close = split- and dividend-adjusted, volume)
-- `document_chunks` (filing_id, company_id, section, fiscal_year, content, embedding)
+- `document_chunks` (filing_id, company_id, section = a key of `SECTIONS`, fiscal_year nullable, chunk_index counted from 0 within each filing and section, content, embedding `Vector(1536)`, search_vector = a `tsvector` GENERATED ALWAYS from `to_tsvector('english', content)` STORED, embedding_model, created_at; unique on filing_id + section + chunk_index; GIN index on search_vector; no vector index at this size)
 - `ingestion_runs` (job_type, status running/success/partial/failed, started_at, finished_at, message, error)
 
 Private organization data (every table has `org_id`):
@@ -297,7 +297,8 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
 ### Phase 2: RAG
 - **2.1 Filing parsing** (`app/rag/parsing.py`): load a stored 10-K from raw storage with LangChain `TextLoader`, convert the HTML to text with `Html2TextTransformer`, and cut out Item 1A Risk Factors and Item 7 MD&A with a regex step. Output one LangChain `Document` per section found with metadata (company_id, ticker, filing_id, form_type, fiscal_year, section). 10-K only; scope is `RAG_TICKERS` and `RAG_LOOKBACK_YEARS`.
   Done when: both sections are found in every in-scope 10-K of AAPL and NVDA (4 filings on 2026-10-04) and tests with saved fixture filings pass.
-- **2.2 Chunking and embeddings**: document_chunks table with a pgvector column and a Postgres full-text search column; split each section Document with `RecursiveCharacterTextSplitter`; embed in batches through the LangChain embeddings interface; Celery task triggered after filing ingestion; idempotent (skip filings already chunked), plus a re-embed command for when the embedding model or chunk settings change. Record the embedding model and vector dimension in `PROJECT_CONTEXT.md`.
+- **2.2 Chunking and embeddings**: document_chunks table with a pgvector column and a Postgres full-text search column; split each section Document with `RecursiveCharacterTextSplitter`; embed in batches through the LangChain embeddings interface; Celery task chained after the `ingest_filings` task (no schedule of its own); idempotent (skip filings already chunked, with no API call), plus a replace mode (`--reembed`, one transaction per filing) for when the embedding model or chunk settings change. Record the embedding model and vector dimension in `PROJECT_CONTEXT.md`.
+  Done when: every in-scope 10-K has embedded chunks and running the task twice creates no duplicates.
   Done when: every in-scope 10-K has embedded chunks and running the task twice creates no duplicates.
 - **2.3 Retrieval**: in `repositories/chunks.py`, a pgvector similarity query and a Postgres full-text query, both with metadata filters (ticker, year range, section). In `app/rag/retrieval.py`: embed the query, run both searches, merge with reciprocal rank fusion, and return LangChain `Document`s with chunk id and score in metadata.
   Done when: tests with fixture chunks return the expected chunk for known queries, and a manual check on real data returns sensible sections for 5 sample questions.
