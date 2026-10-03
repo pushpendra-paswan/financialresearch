@@ -21,6 +21,24 @@ def create_many(db: Session, rows: list[DocumentChunk]) -> None:
     db.flush()
 
 
+def list_for_filings(db: Session, filing_ids: list[int]) -> list[tuple[int, str, int, str, str]]:
+    # Every chunk of these filings as (filing_id, section, chunk_index, ticker, content), in
+    # reading order. Used by the evaluation script to check its phrases and to read the chunk layout
+    statement = (
+        select(
+            DocumentChunk.filing_id,
+            DocumentChunk.section,
+            DocumentChunk.chunk_index,
+            Company.ticker,
+            DocumentChunk.content,
+        )
+        .join(Company, Company.id == DocumentChunk.company_id)
+        .where(DocumentChunk.filing_id.in_(filing_ids))
+        .order_by(DocumentChunk.filing_id, DocumentChunk.section, DocumentChunk.chunk_index)
+    )
+    return [tuple(row) for row in db.execute(statement).all()]
+
+
 def apply_filters(
     statement: Select,
     tickers: list[str] | None,

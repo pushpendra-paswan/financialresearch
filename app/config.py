@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     CHAT_HISTORY_MESSAGES: int = 6
     LLM_TIMEOUT_SECONDS: int = 60
 
+    # Reranking (2.5): Cohere through LangChain's CohereRerank. An empty COHERE_API_KEY means
+    # reranking is off (never logged). After fusion the best RERANK_CANDIDATES_K chunks are sent to
+    # Cohere, which returns the top k. The timeout is short on purpose: a slow Cohere must fall
+    # back to the fused order quickly (the Cohere SDK default is 300 seconds)
+    COHERE_API_KEY: str = ""
+    RERANK_ENABLED: bool = True
+    RERANK_MODEL: str = "rerank-v4.0-fast"
+    RERANK_CANDIDATES_K: int = 20
+    RERANK_TIMEOUT_SECONDS: int = 10
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10

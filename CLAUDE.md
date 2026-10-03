@@ -35,7 +35,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - pgvector Python package for the vector column in SQLAlchemy models
 - LangGraph for the agent (Phase 3)
 - yfinance for daily prices (the first `PriceProvider` implementation; an unofficial Yahoo Finance wrapper, fine for a personal learning project, not for commercial use)
-- Embeddings: OpenAI `text-embedding-3-small` (1536 dimensions) through LangChain's `OpenAIEmbeddings`. Chat model: OpenAI `gpt-5.4-mini` (used from 2.4). Reranker: still open, chosen in 2.5 and recorded in `PROJECT_CONTEXT.md`
+- Embeddings: OpenAI `text-embedding-3-small` (1536 dimensions) through LangChain's `OpenAIEmbeddings`. Chat model: OpenAI `gpt-5.4-mini` (used from 2.4). Reranker: Cohere through `langchain-cohere` (`CohereRerank`), default model `rerank-v4.0-fast` (chosen in 2.5, numbers in `evals/results.md`; `cohere` is also pinned because `app/rag/llm.py` builds the client with a timeout and `app/rag/retrieval.py` imports its `ApiError`)
 - Langfuse for LLM tracing (Phase 3)
 - pytest, ruff
 - Docker Compose for local development
@@ -236,6 +236,8 @@ Tables are created only in the milestone that needs them.
 - When the retrieved evidence is weak, the answer says it does not know. "Weak" is decided with `vector_similarity` (never the RRF score) against `RELEVANCE_THRESHOLD` (0.30); chunks below it are neither numbered nor sent to the model.
 - Read-only agent tools run automatically. Write tools (`create_alert`, `save_report`) set `approval_status = pending` and pause the run until the user approves.
 - Every agent step is stored in `tool_calls`. Runs have a maximum step count and a timeout.
+- Reranking (2.5) fails open: when the Cohere call raises a Cohere API error or an `httpx` error, `retrieve` logs a warning (class name only) and returns the fused order, so chat keeps working when Cohere is down (the same reasoning as the Redis fail-open). Reranking is on when `RERANK_ENABLED` is true and `COHERE_API_KEY` is set.
+- The "I don't know" threshold stays on `vector_similarity`, never on the rerank score: the rerank score has another scale and changes between model versions.
 - Show a "not investment advice" notice in the UI wherever AI answers appear.
 
 ### LangChain (Phase 2)
@@ -308,15 +310,20 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   1. Load the session with org_id AND user_id (404 otherwise) and the model (503 when `OPENAI_API_KEY` is empty); both BEFORE the response starts.
   2. For a follow-up question (the session has history), rewrite it into a standalone question using the last `CHAT_HISTORY_MESSAGES` messages (`prompt | model`). No history, no rewrite and no LLM call.
   3. Retrieve chunks with `retrieve(..., filing_ids=list_scope_filing_ids(db))`, so chat only sees the exact RAG scope (an empty scope answers "I don't know" without searching: an empty `filing_ids` list means "no filter").
-  4. Keep the chunks with `vector_similarity >= RELEVANCE_THRESHOLD`. If none passes, the answer is the fixed `NO_ANSWER` text without calling the answer LLM.
+  4. Keep the chunks with `vector_similarity >= RELEVANCE_THRESHOLD`. If none passes, the answer is the fixed `NO_ANSWER` text without calling the answer LLM. (Steps 3 and 4, and the numbering of step 5, live in `chat.prepare_context` since 2.5, shared with the evaluation script; `retrieve` reranks by itself when reranking is on.)
   5. Number the passing chunks in the prompt and instruct the model to answer only from them and to cite each sentence as [1], [2].
   6. Stream the answer with `.stream()` as NDJSON (`application/x-ndjson`, one JSON object per line): `{"type": "sources", "sources": [{number, chunk_id, ticker, fiscal_year, section, score, content}]}` first (empty for "I don't know"), then `{"type": "token", "text"}` pieces, then `{"type": "done", "message_id", "cited_numbers"}`. A failure after the stream started sends `{"type": "error", "detail"}` instead (generic text; the class name only is logged) and nothing is saved.
   7. After streaming, parse the markers [n] and [1, 2], ignore numbers outside 1..n, and save in ONE transaction the user message, the assistant message and one citation row per distinct valid number (with the snapshot of the chunk).
 
   Plus a chat UI with streaming and clickable citations that open the source passage.
   Done when: an answer shows citations that open the exact source passage, a follow-up question works, and an unanswerable question gets the "I don't know" response.
-- **2.5 Reranking and evaluation**: 30–50 hand-written evaluation questions with expected sections in `evals/`; an evaluation script measuring retrieval hit rate@k and MRR, and answer faithfulness with an LLM-as-judge prompt; a cross-encoder reranker applied after hybrid retrieval; before/after results saved in `evals/results.md`.
-  Done when: a results table shows the effect of reranking and at least one chunk-size comparison.
+- **2.5 Reranking and evaluation**: Cohere reranking after hybrid retrieval (`retrieve(..., rerank=None)`: the best `RERANK_CANDIDATES_K` fused chunks go to `llm.get_reranker(top_n=top_k).compress_documents`, each Document gets `metadata["rerank_score"]`, `None` when reranking did not run; fails open) and an evaluation in `evals/`.
+  - Labels are PHRASE based: `evals/questions.json` is a list of `{id, question, ticker (or null), answerable, expected}` with `expected` a list of `{ticker, section, phrases}`. A retrieved chunk is relevant when its ticker and section match an entry and its text contains one of that entry's phrases (case-insensitive, whitespace collapsed). Chunk ids are not used because they change on every re-embed and chunk-size change.
+  - The set has 40 questions: 28 answerable single-company (AAPL and NVDA, both sections and both fiscal years, some in everyday words), 5 cross-company (ticker null, entries for both companies) and 7 unanswerable (at least 4 on-topic).
+  - Metrics: hit@1/3/5 and MRR@5 over the answerable questions (computed on the top 5 returned by `retrieve`, before the threshold); unanswerable rejected (best `vector_similarity` below `RELEVANCE_THRESHOLD`, or the answer abstains) and answerable wrongly rejected (below the threshold); with `--answers` faithfulness (supported claims / claims, per answer, then averaged), citation coverage and abstention, judged by `JUDGE_PROMPT` with `get_chat_model().with_structured_output(...)`. Every question goes through `chat.prepare_context`, the same retrieval and threshold as chat.
+  - Command: `python -m evals.run_eval --name <run name> [--no-rerank] [--rerank-model rerank-v4.0-pro] [--answers] [--limit N] [--rerank-pause SECONDS] [--validate-only]`. It validates the question file (including that every phrase exists in the stored chunks) before any paid call and writes `evals/runs/<name>.json`.
+  - Run names: `baseline_1500` (`--no-rerank --answers`), `rerank_fast_1500` (`--answers`), `rerank_pro_1500`, `baseline_800` and `rerank_fast_800` (the 800 runs after `CHUNK_SIZE=800 CHUNK_OVERLAP=100 python -m scripts.run_embedding --reembed`, then re-embedded back).
+  Done when: `evals/results.md` has a table with these runs, shows the effect of reranking on concrete questions and a chunk-size comparison, and the defaults chosen from the numbers are set.
 
 ### Phase 3: Agentic AI
 - **3.1 Tool layer**: read-only tools wrapping existing services (`search_filings`, `get_financials`, `get_price_history`, `compute_metrics`, `compare_companies`), organization-scoped, with clear input schemas.

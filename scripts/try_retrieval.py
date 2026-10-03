@@ -2,7 +2,8 @@
 #   [--section S ...] [--year-from Y] [--year-to Y] [--top-k N]
 # or:       docker compose exec api python -m scripts.try_retrieval --samples
 # Runs the hybrid retrieval and prints the results. It writes nothing. It makes one OpenAI
-# embed_query call per question, so it needs OPENAI_API_KEY.
+# embed_query call per question, so it needs OPENAI_API_KEY. With COHERE_API_KEY set and
+# RERANK_ENABLED true it also reranks (one Cohere call per question); --no-rerank turns that off.
 import argparse
 import logging
 import sys
@@ -36,6 +37,7 @@ parser.add_argument("--year-from", type=int, help="first fiscal year")
 parser.add_argument("--year-to", type=int, help="last fiscal year")
 parser.add_argument("--top-k", type=int, help="chunks to return (default RETRIEVAL_TOP_K)")
 parser.add_argument("--samples", action="store_true", help="run the 7 sample questions")
+parser.add_argument("--no-rerank", action="store_true", help="skip the Cohere rerank step")
 args = parser.parse_args()
 
 if args.samples == (args.question is not None):
@@ -61,6 +63,7 @@ try:
                 year_to=args.year_to,
                 sections=sections,
                 top_k=args.top_k,
+                rerank=False if args.no_rerank else None,
             )
         except ValueError as error:
             print(f"Invalid input: {error}")
@@ -76,11 +79,13 @@ try:
             print("    no results")
         for rank, document in enumerate(documents, start=1):
             meta = document.metadata
+            rerank_score = meta["rerank_score"]
+            rerank_text = "none" if rerank_score is None else f"{rerank_score:.4f}"
             preview = " ".join(document.page_content[:200].split())
             print(
                 f"  #{rank} {meta['ticker']} FY{meta['fiscal_year']} {meta['section']} "
                 f"chunk_id={meta['chunk_id']} score={meta['score']:.5f} "
-                f"similarity={meta['vector_similarity']:.4f} "
+                f"similarity={meta['vector_similarity']:.4f} rerank_score={rerank_text} "
                 f"vector_rank={meta['vector_rank']} text_rank={meta['text_rank']}"
             )
             print(f"      {preview}")

@@ -3,6 +3,7 @@ import re
 from collections.abc import Iterator
 
 import openai
+from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -62,6 +63,57 @@ QA_PROMPT = ChatPromptTemplate.from_messages(
 )
 
 
+# Steps 4 and 6 of the chat flow, shared by `ask` and the evaluation script (evals/run_eval.py),
+# so the evaluation measures exactly what chat does. Retrieves inside the RAG scope, keeps the
+# chunks that pass the relevance threshold, numbers them and builds the excerpt text for the
+# prompt. Returns (retrieved, passing, sources, context_text): all retrieved documents, the ones
+# that passed, the numbered sources for the client, and the labelled excerpts ("" when none passed)
+def prepare_context(
+    db: Session, question: str, ticker: str | None
+) -> tuple[list[Document], list[Document], list[dict], str]:
+    # Retrieve, restricted to the exact RAG scope. An EMPTY filing_ids list would mean "no
+    # filter" in retrieve, so an empty scope must skip the search instead
+    scope_filing_ids = list_scope_filing_ids(db)
+    retrieved = []
+    if scope_filing_ids:
+        retrieved = retrieve(
+            db,
+            question,
+            tickers=[ticker] if ticker else None,
+            filing_ids=scope_filing_ids,
+        )
+    # Keep only relevant chunks. The threshold uses vector_similarity, not the RRF score or the
+    # rerank score (those only order chunks). The order from retrieve is kept
+    passing = [
+        document
+        for document in retrieved
+        if document.metadata["vector_similarity"] >= settings.RELEVANCE_THRESHOLD
+    ]
+
+    sources = [
+        {
+            "number": number,
+            "chunk_id": document.metadata["chunk_id"],
+            "ticker": document.metadata["ticker"],
+            "fiscal_year": document.metadata["fiscal_year"],
+            "section": document.metadata["section"],
+            "score": document.metadata["vector_similarity"],
+            "content": document.page_content,
+        }
+        for number, document in enumerate(passing, start=1)
+    ]
+
+    # Number the chunks for the prompt: "[1] NVDA FY2026 10-K, Risk Factors:"
+    excerpt_blocks = []
+    for source in sources:
+        year = f"FY{source['fiscal_year']} " if source["fiscal_year"] else ""
+        section_name = SECTION_NAMES.get(source["section"], source["section"])
+        label = f"[{source['number']}] {source['ticker']} {year}10-K, {section_name}:"
+        excerpt_blocks.append(f"{label}\n{source['content']}")
+
+    return retrieved, passing, sources, "\n\n".join(excerpt_blocks)
+
+
 # The one flow of the chat feature. The session check and the model are done HERE, before any
 # response exists, so a missing session or key is a normal JSON error (404, 503). The returned
 # generator then does the rest and yields NDJSON events as dicts:
@@ -108,44 +160,17 @@ def ask(
                 if rewritten_question:
                     standalone_question = rewritten_question
 
-            # 4. Retrieve, restricted to the exact RAG scope. An EMPTY filing_ids list would mean
-            # "no filter" in retrieve, so an empty scope must skip the search instead
-            scope_filing_ids = list_scope_filing_ids(db)
-            documents = []
-            if scope_filing_ids:
-                documents = retrieve(
-                    db,
-                    standalone_question,
-                    tickers=[ticker] if ticker else None,
-                    filing_ids=scope_filing_ids,
-                )
-            # Keep only relevant chunks. The threshold uses vector_similarity, not the RRF
-            # score (which only orders chunks). The order from retrieve is kept
-            passing = [
-                document
-                for document in documents
-                if document.metadata["vector_similarity"] >= settings.RELEVANCE_THRESHOLD
-            ]
+            # 4. Retrieve inside the RAG scope, apply the relevance threshold and number the
+            # sources (shared with the evaluation script)
+            retrieved, passing, sources, excerpts = prepare_context(db, standalone_question, ticker)
             logger.info(
                 "chat: %d chunks retrieved, %d passed the threshold (rewrite=%s)",
-                len(documents),
+                len(retrieved),
                 len(passing),
                 rewritten_question is not None,
             )
 
             # The numbered sources go to the client first (empty list for "I don't know")
-            sources = [
-                {
-                    "number": number,
-                    "chunk_id": document.metadata["chunk_id"],
-                    "ticker": document.metadata["ticker"],
-                    "fiscal_year": document.metadata["fiscal_year"],
-                    "section": document.metadata["section"],
-                    "score": document.metadata["vector_similarity"],
-                    "content": document.page_content,
-                }
-                for number, document in enumerate(passing, start=1)
-            ]
             yield {"type": "sources", "sources": sources}
 
             if not passing:
@@ -155,16 +180,7 @@ def ask(
                 answer_model = None
                 yield {"type": "token", "text": NO_ANSWER}
             else:
-                # 6. Number the chunks and build the prompt: "[1] NVDA FY2026 10-K, Risk Factors:"
-                excerpt_blocks = []
-                for source in sources:
-                    year = f"FY{source['fiscal_year']} " if source["fiscal_year"] else ""
-                    section_name = SECTION_NAMES.get(source["section"], source["section"])
-                    label = f"[{source['number']}] {source['ticker']} {year}10-K, {section_name}:"
-                    excerpt_blocks.append(f"{label}\n{source['content']}")
-                excerpts = "\n\n".join(excerpt_blocks)
-
-                # 7. Stream the answer, forwarding every non-empty piece (OpenAI also sends empty
+                # 6. Stream the answer, forwarding every non-empty piece (OpenAI also sends empty
                 # pieces at the start and the end)
                 logger.info("chat: calling the answer model with %d excerpts", len(sources))
                 answer_text = ""
@@ -178,7 +194,7 @@ def ask(
                 if not answer_text.strip():
                     raise ValueError("The model returned an empty answer")
 
-            # 8. Parse the markers [n] and [1, 2]. Numbers outside 1..n are ignored
+            # 7. Parse the markers [n] and [1, 2]. Numbers outside 1..n are ignored
             cited_numbers = set()
             for group in re.findall(r"\[(\d+(?:\s*,\s*\d+)*)\]", answer_text):
                 for number_text in group.split(","):

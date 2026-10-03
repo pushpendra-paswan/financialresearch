@@ -1,0 +1,3975 @@
+{
+  "name": "rerank_fast_1500",
+  "created_at": "2026-10-03T21:07:51+00:00",
+  "settings": {
+    "chunk_size": 1500,
+    "longest_chunk_chars": 1499,
+    "longest_observed_overlap": 197,
+    "chunk_count": 440,
+    "rerank": true,
+    "rerank_model": "rerank-v4.0-fast",
+    "rerank_candidates_k": 20,
+    "retrieval_top_k": 5,
+    "retrieval_candidates_k": 20,
+    "relevance_threshold": 0.3,
+    "answers": true,
+    "chat_model": "gpt-5.4-mini",
+    "question_count": 40
+  },
+  "metrics": {
+    "answerable_questions": 33,
+    "unanswerable_questions": 7,
+    "hit_at_1": 0.6363636363636364,
+    "hit_at_3": 0.9393939393939394,
+    "hit_at_5": 1.0,
+    "mrr_at_5": 0.7878787878787878,
+    "unanswerable_rejected": 0.8571428571428571,
+    "answerable_wrongly_rejected": 0.0,
+    "faithfulness": 0.977946127946128,
+    "citation_coverage": 0.9939393939393939,
+    "abstention_on_unanswerable": 0.8571428571428571,
+    "judged_answers": 33
+  },
+  "call_counts": {
+    "embed_query": 40,
+    "rerank": 40,
+    "answer": 39,
+    "judge": 39
+  },
+  "questions": [
+    {
+      "id": "a01",
+      "question": "What were Apple's total net sales in fiscal 2025?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.7000407711158162,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple\u2019s total net sales in fiscal 2025 were $416,161 million. [1]",
+      "claims": [
+        {
+          "claim": "Apple\u2019s total net sales in fiscal 2025 were $416,161 million.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 147,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6825506642480761,
+          "rerank_score": 0.9251217,
+          "relevant": true,
+          "preview": "Greater China Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher ne"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 146,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5909842030849292,
+          "rerank_score": 0.86006385,
+          "relevant": true,
+          "preview": "Segment Operating Performance The following table shows net sales by reportable segment for 2025, 2024 and 2023 (dollars in millions): | | | | | | | |"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6768968174591664,
+          "rerank_score": 0.76741105,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 149,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6134721295772686,
+          "rerank_score": 0.6822351,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 23 * * * Gross Margin Products and Services gross margin and gross margin percentage for 2025, 2024 and 2023 were as fol"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 507,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.7000407711158162,
+          "rerank_score": 0.6771325,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 22 * * * Products and Services Performance The following table shows net sales by category for 2024, 2023 and 2022 (doll"
+        }
+      ]
+    },
+    {
+      "id": "a02",
+      "question": "Why did Apple's sales in Greater China go down in 2025?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6868062231650831,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says Greater China net sales decreased in 2025 compared to 2024 primarily because of lower net sales of iPhone, partially offset by higher net sales of Mac. [1][2]",
+      "claims": [
+        {
+          "claim": "Apple says Greater China net sales decreased in 2025 compared to 2024 primarily because of lower net sales of iPhone, partially offset by higher net sales of Mac.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 147,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6868062231650831,
+          "rerank_score": 0.94048434,
+          "relevant": true,
+          "preview": "Greater China Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher ne"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 146,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6023050154365108,
+          "rerank_score": 0.9177756,
+          "relevant": true,
+          "preview": "Segment Operating Performance The following table shows net sales by reportable segment for 2025, 2024 and 2023 (dollars in millions): | | | | | | | |"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 505,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.6472694989269283,
+          "rerank_score": 0.8703936,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 21 * * * Segment Operating Performance The following table shows net sales by reportable segment for 2024, 2023 and 2022"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 135,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4593350939482814,
+          "rerank_score": 0.5405358,
+          "relevant": false,
+          "preview": "The Company's financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies. The Comp"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5795393587222881,
+          "rerank_score": 0.52692705,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        }
+      ]
+    },
+    {
+      "id": "a03",
+      "question": "How large was the one-time tax charge tied to the State Aid Decision in Apple's fiscal 2024?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.6789429718731144,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple\u2019s effective tax rate for 2024 was higher primarily because of a one-time income tax charge of $10.2 billion, net, related to the State Aid Decision. [2][3]",
+      "claims": [
+        {
+          "claim": "Apple\u2019s effective tax rate for 2024 was higher primarily because of a one-time income tax charge related to the State Aid Decision.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The one-time income tax charge related to the State Aid Decision was $10.2 billion, net.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 513,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.6789429718731144,
+          "rerank_score": 0.93688816,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 25 * * * State Aid Decision Tax Payable As of September 28, 2024, the Company had an obligation to pay \u20ac14.2 billion or "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 510,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.6262596228684736,
+          "rerank_score": 0.931612,
+          "relevant": true,
+          "preview": "The growth in R&D expense during 2024 compared to 2023 was driven primarily by increases in headcount-related expenses. Selling, General and Administr"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 511,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.4857186038688286,
+          "rerank_score": 0.9034987,
+          "relevant": true,
+          "preview": "The Company's effective tax rate for 2024 was higher compared to 2023 due primarily to a one-time income tax charge of $10.2 billion, net, related to "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 152,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.4649821284320843,
+          "rerank_score": 0.6939709,
+          "relevant": false,
+          "preview": "The Company's effective tax rate for 2025 was lower compared to 2024 due to a $10.7 billion year-over-year decrease in the provision for income taxes "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 512,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.5580396969284698,
+          "rerank_score": 0.4996094,
+          "relevant": false,
+          "preview": "Leases The Company has lease arrangements for certain equipment and facilities, including corporate, data center, manufacturing and retail space. As o"
+        }
+      ]
+    },
+    {
+      "id": "a04",
+      "question": "How much money did Apple hand back to shareholders through buybacks and dividends in fiscal 2025?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6806563237824371,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "In fiscal 2025, Apple repurchased $89.3 billion of common stock and paid $15.4 billion in dividends and dividend equivalents, for a total of $104.7 billion returned to shareholders through buybacks and dividends. [1]",
+      "claims": [
+        {
+          "claim": "In fiscal 2025, Apple repurchased $89.3 billion of common stock and paid $15.4 billion in dividends and dividend equivalents, for a total of $104.7 billion returned to shareholders through buybacks and dividends.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 154,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6806563237824371,
+          "rerank_score": 0.90281546,
+          "relevant": true,
+          "preview": "Deemed Repatriation Tax Payable As of September 27, 2025, the balance of the deemed repatriation tax payable imposed by the U.S. Tax Cuts and Jobs Act"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 141,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5733034746994806,
+          "rerank_score": 0.60168713,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 16 * * * General Risks The price of the Company's stock is subject to volatility. The Company's stock has experienced su"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 513,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.649613153114379,
+          "rerank_score": 0.59981334,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 25 * * * State Aid Decision Tax Payable As of September 28, 2024, the Company had an obligation to pay \u20ac14.2 billion or "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 147,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5197218935010045,
+          "rerank_score": 0.42403036,
+          "relevant": false,
+          "preview": "Greater China Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher ne"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 143,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5529548209307952,
+          "rerank_score": 0.39010403,
+          "relevant": false,
+          "preview": "Fourth Quarter 2025: \u2022iPhone 17, iPhone Air, iPhone 17 Pro and iPhone 17 Pro Max \u2022Apple Watch Series 11, Apple Watch SE 3 and Apple Watch Ultra 3 \u2022Air"
+        }
+      ]
+    },
+    {
+      "id": "a05",
+      "question": "How big was the share repurchase program Apple announced in May 2024?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6592966446868304,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple announced a new share repurchase program of up to $110 billion in May 2024. [1]",
+      "claims": [
+        {
+          "claim": "Apple announced a new share repurchase program of up to $110 billion in May 2024.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 513,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.6584059873618562,
+          "rerank_score": 0.9144742,
+          "relevant": true,
+          "preview": "Apple Inc. | 2024 Form 10-K | 25 * * * State Aid Decision Tax Payable As of September 28, 2024, the Company had an obligation to pay \u20ac14.2 billion or "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 154,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6592966446868304,
+          "rerank_score": 0.60168713,
+          "relevant": false,
+          "preview": "Deemed Repatriation Tax Payable As of September 27, 2025, the balance of the deemed repatriation tax payable imposed by the U.S. Tax Cuts and Jobs Act"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 141,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5668553705329403,
+          "rerank_score": 0.41641688,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 16 * * * General Risks The price of the Company's stock is subject to volatility. The Company's stock has experienced su"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 502,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.3663787400025348,
+          "rerank_score": 0.33947718,
+          "relevant": false,
+          "preview": "General Risks The price of the Company's stock is subject to volatility. The Company's stock has experienced substantial price volatility in the past "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 511,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.44999097666207977,
+          "rerank_score": 0.3153985,
+          "relevant": false,
+          "preview": "The Company's effective tax rate for 2024 was higher compared to 2023 due primarily to a one-time income tax charge of $10.2 billion, net, related to "
+        }
+      ]
+    },
+    {
+      "id": "a06",
+      "question": "Which new products did Apple announce in the fourth quarter of fiscal 2025?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.7967984389767279,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple announced **iPhone 17, iPhone Air, iPhone 17 Pro and iPhone 17 Pro Max**, **Apple Watch Series 11, Apple Watch SE 3 and Apple Watch Ultra 3**, and **AirPods Pro 3** in the fourth quarter of fiscal 2025. [1]",
+      "claims": [
+        {
+          "claim": "Apple announced iPhone 17, iPhone Air, iPhone 17 Pro and iPhone 17 Pro Max in the fourth quarter of fiscal 2025.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple announced Apple Watch Series 11, Apple Watch SE 3 and Apple Watch Ultra 3 in the fourth quarter of fiscal 2025.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple announced AirPods Pro 3 in the fourth quarter of fiscal 2025.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 142,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.7967984389767279,
+          "rerank_score": 0.9402653,
+          "relevant": true,
+          "preview": "The following discussion should be read in conjunction with the consolidated financial statements and accompanying notes included in Part II, Item 8 o"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 143,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6870031467729045,
+          "rerank_score": 0.91568834,
+          "relevant": true,
+          "preview": "Fourth Quarter 2025: \u2022iPhone 17, iPhone Air, iPhone 17 Pro and iPhone 17 Pro Max \u2022Apple Watch Series 11, Apple Watch SE 3 and Apple Watch Ultra 3 \u2022Air"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5976951927341394,
+          "rerank_score": 0.7005672,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 147,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5892120320946288,
+          "rerank_score": 0.57711405,
+          "relevant": false,
+          "preview": "Greater China Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher ne"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 503,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.76692986598071,
+          "rerank_score": 0.5249792,
+          "relevant": false,
+          "preview": "The following discussion should be read in conjunction with the consolidated financial statements and accompanying notes included in Part II, Item 8 o"
+        }
+      ]
+    },
+    {
+      "id": "a07",
+      "question": "How did Apple's Services gross margin percentage change in 2025, and why?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.7874507277003715,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple\u2019s Services gross margin percentage increased in 2025 compared to 2024, from 73.9% to 75.4%. [1] It increased primarily due to a different mix of services, partially offset by higher costs. [2]",
+      "claims": [
+        {
+          "claim": "Apple\u2019s Services gross margin percentage increased in 2025 compared to 2024, from 73.9% to 75.4%.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The increase in Apple\u2019s Services gross margin percentage in 2025 was primarily due to a different mix of services, partially offset by higher costs.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 149,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.7874507277003715,
+          "rerank_score": 0.97478276,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 23 * * * Gross Margin Products and Services gross margin and gross margin percentage for 2025, 2024 and 2023 were as fol"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 150,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6380614020286226,
+          "rerank_score": 0.9552524,
+          "relevant": true,
+          "preview": "Services Gross Margin Services gross margin increased during 2025 compared to 2024 primarily due to higher Services net sales and a different mix of s"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.7525600397314681,
+          "rerank_score": 0.8745494,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 508,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.7130190538900391,
+          "rerank_score": 0.8453561,
+          "relevant": false,
+          "preview": "Wearables, Home and Accessories Wearables, Home and Accessories net sales decreased during 2024 compared to 2023 due primarily to lower net sales of W"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 509,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.5880824925673419,
+          "rerank_score": 0.7969886,
+          "relevant": false,
+          "preview": "Services Gross Margin Services gross margin increased during 2024 compared to 2023 due primarily to higher Services net sales. Services gross margin p"
+        }
+      ]
+    },
+    {
+      "id": "a08",
+      "question": "Where are the factories that assemble Apple's products, and why is that a risk?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.5480059216519068,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says that final assembly of substantially all of its hardware products is performed by outsourcing partners primarily located in Asia, and it also has manufacturing in whole or in part performed by outsourcing partners mainly in China mainland, India, Japan, South Korea, Taiwan, and Vietnam, as well as some partners and facilities in the U.S. [2][3]\n\nThis is a risk because Apple says it has reduced direct control over production and distribution, which can adversely affect the cost, quality, or quantity of products and its ability to respond to changing conditions. [2]\n\nApple also says disruptions to these partners or to manufacturing and logistics in those locations can reduce the supply of components or finished goods, and that failures, disasters, public health issues, geopolitical tensions, or other disruptions can interrupt supply and raise costs. [1][3][5]",
+      "claims": [
+        {
+          "claim": "Final assembly of substantially all of Apple's hardware products is performed by outsourcing partners primarily located in Asia.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple has manufacturing in whole or in part performed by outsourcing partners mainly in China mainland, India, Japan, South Korea, Taiwan, and Vietnam, as well as some partners and facilities in the U.S.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple has reduced direct control over production and distribution.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Reduced direct control can adversely affect the cost, quality, or quantity of products and Apple's ability to respond to changing conditions.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Disruptions to Apple's partners or to manufacturing and logistics in those locations can reduce the supply of components or finished goods.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Failures, disasters, public health issues, geopolitical tensions, or other disruptions can interrupt supply and raise costs.",
+          "cited_numbers": [
+            1,
+            3,
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 84,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5394980015182925,
+          "rerank_score": 0.7360972,
+          "relevant": false,
+          "preview": "The Company's operations are also subject to the risks of industrial accidents at its suppliers and contract manufacturers. While the Company's suppli"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 93,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4909992421914722,
+          "rerank_score": 0.72689116,
+          "relevant": true,
+          "preview": "A significant majority of the Company's manufacturing is performed in whole or in part by outsourcing partners located primarily in China mainland, In"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 455,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.49786986815417245,
+          "rerank_score": 0.7143093,
+          "relevant": false,
+          "preview": "The Company relies on single-source outsourcing partners in the U.S., Asia and Europe to supply and manufacture many components, and on outsourcing pa"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 453,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5480059216519068,
+          "rerank_score": 0.62758607,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 7 * * * The Company depends on component and product manufacturing and logistical services provided by outsourcing partn"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 96,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5478598762779396,
+          "rerank_score": 0.6091522,
+          "relevant": false,
+          "preview": "Additionally, the Company's new products often utilize custom components available from only one source. When a component or product uses new technolo"
+        }
+      ]
+    },
+    {
+      "id": "a09",
+      "question": "What does Apple say about parts that come from only one supplier?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 4,
+      "best_similarity": 0.5733308920702279,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says that some of its new products use custom components available from only one source, and that this can create initial capacity constraints and make it harder to obtain sufficient quantities in a timely manner or from an alternative source. [1][2]\n\nApple also says that because it relies on single or limited sources for many critical components, a business interruption affecting those sources could worsen the impact on the company, and that it remains exposed to supply shortages and price increases that could materially adversely affect its business, results of operations, financial condition, and stock price. [1][3][4]\n\nApple further says that the continued availability of these components at acceptable prices is not assured, that supply agreements may not be extendable or renewable on similar terms, and that supplier failures or consolidation could further limit access to components. [1][4]",
+      "claims": [
+        {
+          "claim": "Some of Apple's new products use custom components available from only one source.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "This can create initial capacity constraints.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "This can make it harder to obtain sufficient quantities in a timely manner or from an alternative source.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple relies on single or limited sources for many critical components.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "A business interruption affecting those sources could worsen the impact on the company.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple remains exposed to supply shortages and price increases that could materially adversely affect its business, results of operations, financial condition, and stock price.",
+          "cited_numbers": [
+            1,
+            4
+          ],
+          "supported": false
+        },
+        {
+          "claim": "The continued availability of these components at acceptable prices is not assured.",
+          "cited_numbers": [
+            1,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Supply agreements may not be extendable or renewable on similar terms.",
+          "cited_numbers": [
+            1,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Supplier failures or consolidation could further limit access to components.",
+          "cited_numbers": [
+            1,
+            4
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 96,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5733308920702279,
+          "rerank_score": 0.85929817,
+          "relevant": false,
+          "preview": "Additionally, the Company's new products often utilize custom components available from only one source. When a component or product uses new technolo"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 458,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5558097867991252,
+          "rerank_score": 0.84637463,
+          "relevant": false,
+          "preview": "The Company's new products often utilize custom components available from only one source. When a component or product uses new technologies, initial "
+        },
+        {
+          "rank": 3,
+          "chunk_id": 85,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.43932482352244673,
+          "rerank_score": 0.8047744,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 6 * * * Following any interruption to its business, the Company can require substantial recovery time, incur significant"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 457,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.46900399009082094,
+          "rerank_score": 0.7103069,
+          "relevant": true,
+          "preview": "Because the Company currently obtains certain components from single or limited sources, the Company is subject to significant supply and pricing risk"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 455,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.4603107467834264,
+          "rerank_score": 0.67198735,
+          "relevant": false,
+          "preview": "The Company relies on single-source outsourcing partners in the U.S., Asia and Europe to supply and manufacture many components, and on outsourcing pa"
+        }
+      ]
+    },
+    {
+      "id": "a10",
+      "question": "Could the iPhone maker be forced to change how its App Store charges developers in Europe?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.5699349928586804,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Yes. The excerpts say the company has already implemented new business terms and alternative fee structures for iOS and iPadOS apps in the EU to comply with the DMA, and that the DMA has been challenged and may be challenged further, with noncompliance carrying significant fines and penalties. [1][2][3]\n\nThe excerpts also say the company is subject to investigations in Europe relating to App Store terms and conditions, and if those investigations are resolved against it, it may be required to make further changes to its business practices. [4][5]\n\n",
+      "claims": [
+        {
+          "claim": "The company has already implemented new business terms and alternative fee structures for iOS and iPadOS apps in the EU to comply with the DMA.",
+          "cited_numbers": [
+            1,
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The DMA has been challenged and may be challenged further, with noncompliance carrying significant fines and penalties.",
+          "cited_numbers": [
+            1,
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The company is subject to investigations in Europe relating to App Store terms and conditions.",
+          "cited_numbers": [
+            4,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "If those investigations are resolved against the company, it may be required to make further changes to its business practices.",
+          "cited_numbers": [
+            4,
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 487,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5442721930581319,
+          "rerank_score": 0.76949626,
+          "relevant": false,
+          "preview": "The Company has also implemented changes to iOS, iPadOS, the App Store and Safari in the EU as it seeks to comply with the DMA, including new business"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 124,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.522071165604507,
+          "rerank_score": 0.76320153,
+          "relevant": true,
+          "preview": "Globally, several jurisdictions have adopted, or may in the future adopt, competition-related laws and regulations imposing wide-ranging obligations o"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 466,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5699349928586804,
+          "rerank_score": 0.7353377,
+          "relevant": true,
+          "preview": "The Company distributes third-party applications for its products through the App Store. For the vast majority of applications, developers keep all of"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 488,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.4539597672696867,
+          "rerank_score": 0.6257583,
+          "relevant": false,
+          "preview": "The Company is also currently subject to antitrust investigations and litigation in various jurisdictions around the world, which can result in legal "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 125,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4554907830277857,
+          "rerank_score": 0.6202536,
+          "relevant": false,
+          "preview": "The Company is also currently subject to antitrust investigations and litigation in various jurisdictions around the world, which can result in legal "
+        }
+      ]
+    },
+    {
+      "id": "a11",
+      "question": "How does a weaker foreign currency against the dollar hurt Apple?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6435893841117598,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "A weaker foreign currency relative to the U.S. dollar hurts Apple because it reduces the U.S. dollar value of Apple\u2019s foreign currency-denominated sales and earnings. [1][3]\n\nIt can also lead Apple to raise international prices, which may reduce demand for its products. [1][3]\n\nIf Apple chooses not to raise prices for competitive or other reasons, the U.S. dollar value of the gross margins on those sales would be adversely affected. [1][3]\n\nThe excerpts also say that foreign exchange movements can adversely affect gross margins and that hedging may not fully offset those effects. [1][3]",
+      "claims": [
+        {
+          "claim": "A weaker foreign currency relative to the U.S. dollar hurts Apple because it reduces the U.S. dollar value of Apple\u2019s foreign currency-denominated sales and earnings.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "A weaker foreign currency relative to the U.S. dollar can lead Apple to raise international prices, which may reduce demand for its products.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "If Apple chooses not to raise prices for competitive or other reasons, the U.S. dollar value of the gross margins on those sales would be adversely affected.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Foreign exchange movements can adversely affect gross margins.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Hedging may not fully offset the adverse effects of foreign exchange movements.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 135,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.6435893841117598,
+          "rerank_score": 0.9019552,
+          "relevant": true,
+          "preview": "The Company's financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies. The Comp"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 506,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.5144899737889226,
+          "rerank_score": 0.81908435,
+          "relevant": false,
+          "preview": "Japan Japan net sales increased during 2024 compared to 2023 due primarily to higher net sales of iPhone. The weakness in the yen relative to the U.S."
+        },
+        {
+          "rank": 3,
+          "chunk_id": 496,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5382166046151656,
+          "rerank_score": 0.7915634,
+          "relevant": true,
+          "preview": "The weakening of foreign currencies relative to the U.S. dollar adversely affects the U.S. dollar value of the Company's foreign currency-denominated "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 505,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.46768248828874115,
+          "rerank_score": 0.78173083,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 21 * * * Segment Operating Performance The following table shows net sales by reportable segment for 2024, 2023 and 2022"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 146,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.41969117589940375,
+          "rerank_score": 0.7589397,
+          "relevant": false,
+          "preview": "Segment Operating Performance The following table shows net sales by reportable segment for 2025, 2024 and 2023 (dollars in millions): | | | | | | | |"
+        }
+      ]
+    },
+    {
+      "id": "a12",
+      "question": "What does Apple say about being sued over patents?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.5649082256412983,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says it has faced and continues to face a significant number of patent claims relating to its standards-enabled products, and that new claims may arise in the future. [3] It says technology, data, and other intellectual property asset-holding companies frequently assert their intellectual property rights and seek royalties, often entering litigation over alleged infringement or other violations. [3] Apple says it is vigorously defending infringement actions in courts in several U.S. jurisdictions and internationally, and plaintiffs frequently seek broad injunctive relief and substantial damages. [3] It also says defending against litigation or responding to government investigations can be expensive, time-consuming, and disruptive, and that settlement agreements may not be available on acceptable terms and can reduce revenue, increase costs, and require business practice changes. [5]",
+      "claims": [
+        {
+          "claim": "Apple says it has faced and continues to face a significant number of patent claims relating to its standards-enabled products.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says new patent claims may arise in the future.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says technology, data, and other intellectual property asset-holding companies frequently assert their intellectual property rights and seek royalties.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says these companies often enter into litigation over alleged infringement or other violations of intellectual property rights.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says it is vigorously defending infringement actions in courts in several U.S. jurisdictions and internationally.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says plaintiffs frequently seek broad injunctive relief and substantial damages.",
+          "cited_numbers": [
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says defending against litigation or responding to government investigations can be expensive, time-consuming, and disruptive.",
+          "cited_numbers": [
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says settlement agreements may not be available on acceptable terms.",
+          "cited_numbers": [
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says settlement agreements can reduce revenue, increase costs, and require business practice changes.",
+          "cited_numbers": [
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 118,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5578334144640066,
+          "rerank_score": 0.7660137,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 12 * * * The outcome of litigation or government investigations is inherently uncertain. If one or more legal matters we"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 479,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5611318932435478,
+          "rerank_score": 0.7531763,
+          "relevant": true,
+          "preview": "The Company has faced and continues to face a significant number of patent claims relating to its cellular-enabled products, and new claims may arise "
+        },
+        {
+          "rank": 3,
+          "chunk_id": 116,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5475115199085053,
+          "rerank_score": 0.7078896,
+          "relevant": true,
+          "preview": "The Company has faced and continues to face a significant number of patent claims relating to its standards-enabled products, and new claims may arise"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 463,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.4479744090662434,
+          "rerank_score": 0.6474416,
+          "relevant": false,
+          "preview": "The Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at a"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 117,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5649082256412983,
+          "rerank_score": 0.596057,
+          "relevant": false,
+          "preview": "Regardless of the merit of particular claims, defending against litigation or responding to government investigations can be expensive, time-consuming"
+        }
+      ]
+    },
+    {
+      "id": "a13",
+      "question": "What risk does Apple see from earthquakes and other natural disasters near its suppliers?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6277352507290593,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says that many of its suppliers and contract manufacturers are located in areas prone to earthquakes and other natural disasters, and that global climate change is making certain natural disasters and extreme weather happen more often or with greater intensity. [1][2]\n\nApple says such events can make it difficult or impossible to manufacture and deliver products, create delays and inefficiencies in its supply and manufacturing chain, cause slowdowns and outages in its service offerings, increase costs, and negatively affect consumer spending and demand in affected areas. [1][2]",
+      "claims": [
+        {
+          "claim": "Apple says that many of its suppliers and contract manufacturers are located in areas prone to earthquakes and other natural disasters.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says that global climate change is making certain natural disasters and extreme weather happen more often or with greater intensity.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can make it difficult or impossible to manufacture and deliver products.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can create delays and inefficiencies in its supply and manufacturing chain.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can cause slowdowns and outages in its service offerings.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can increase costs.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can negatively affect consumer spending and demand in affected areas.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 446,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.6009857901378366,
+          "rerank_score": 0.8707512,
+          "relevant": true,
+          "preview": "Many of the Company's operations and facilities, as well as critical business operations of the Company's suppliers and contract manufacturers, are in"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 83,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.6021217641584882,
+          "rerank_score": 0.86912143,
+          "relevant": true,
+          "preview": "Many of the Company's operations, retail stores and facilities, as well as critical business operations of the Company's suppliers and contract manufa"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 79,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5901218354036946,
+          "rerank_score": 0.7688026,
+          "relevant": false,
+          "preview": "Adverse economic conditions can also lead to increased credit and collectibility risk on the Company's trade receivables; the failure of derivative co"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 443,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5907001671030148,
+          "rerank_score": 0.76741105,
+          "relevant": false,
+          "preview": "Adverse economic conditions can also lead to increased credit and collectibility risk on the Company's trade receivables; the failure of derivative co"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 84,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.6277352507290593,
+          "rerank_score": 0.658066,
+          "relevant": false,
+          "preview": "The Company's operations are also subject to the risks of industrial accidents at its suppliers and contract manufacturers. While the Company's suppli"
+        }
+      ]
+    },
+    {
+      "id": "a14",
+      "question": "How do the new US tariffs announced in 2025 threaten Apple?",
+      "ticker": "AAPL",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6025339674084352,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "The 2025 U.S. tariffs could materially adversely affect Apple\u2019s business, results of operations, and financial condition, including by affecting its supply chain, the availability of rare earths and other raw materials and components, pricing, and gross margin. [1] Apple also says that changing its business and supply chain to comply with new or changed trade restrictions can be expensive, time-consuming, and disruptive. [2] The company adds that these tariffs and related trade restrictions could also create uncertainty and may be difficult to fully mitigate, while retaliatory measures from other countries could add further disruption. [2]",
+      "claims": [
+        {
+          "claim": "The 2025 U.S. tariffs could materially adversely affect Apple\u2019s business, results of operations, and financial condition, including by affecting its supply chain, the availability of rare earths and other raw materials and components, pricing, and gross margin.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple also says that changing its business and supply chain to comply with new or changed trade restrictions can be expensive, time-consuming, and disruptive.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The company adds that these tariffs and related trade restrictions could also create uncertainty and may be difficult to fully mitigate.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Retaliatory measures from other countries could add further disruption.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 144,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6025339674084352,
+          "rerank_score": 0.7743104,
+          "relevant": true,
+          "preview": "Beginning in the second quarter of 2025, new U.S. Tariffs were announced, including additional tariffs on imports from China, India, Japan, South Kore"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 81,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5429019520955972,
+          "rerank_score": 0.6685341,
+          "relevant": true,
+          "preview": "services and third-party applications to its customers, and increase the prices of its products and services. Changing the Company's business and supp"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 79,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.49282425229096394,
+          "rerank_score": 0.6165665,
+          "relevant": false,
+          "preview": "Adverse economic conditions can also lead to increased credit and collectibility risk on the Company's trade receivables; the failure of derivative co"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 149,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.48529619602333196,
+          "rerank_score": 0.50156254,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 23 * * * Gross Margin Products and Services gross margin and gross margin percentage for 2025, 2024 and 2023 were as fol"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 96,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4984242653890205,
+          "rerank_score": 0.49375033,
+          "relevant": false,
+          "preview": "Additionally, the Company's new products often utilize custom components available from only one source. When a component or product uses new technolo"
+        }
+      ]
+    },
+    {
+      "id": "n01",
+      "question": "How much revenue did NVIDIA report for fiscal year 2026?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6585670458556852,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA reported revenue of $215.938 billion for fiscal year 2026. [1]",
+      "claims": [
+        {
+          "claim": "NVIDIA reported revenue of $215.938 billion for fiscal year 2026.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 415,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.6585670458556852,
+          "rerank_score": 0.87877274,
+          "relevant": true,
+          "preview": "Fiscal Year 2026 Summary | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 426,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5943254556245267,
+          "rerank_score": 0.7596536,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 427,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5952284398718002,
+          "rerank_score": 0.67198735,
+          "relevant": false,
+          "preview": "40 * * * Table of Contents Concentration of Revenue We refer to customers who purchase products directly from NVIDIA as direct customers, such as AIBs"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 410,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.6558717240907752,
+          "rerank_score": 0.65982175,
+          "relevant": false,
+          "preview": "Headquartered in Santa Clara, California, NVIDIA was incorporated in California in April 1993 and reincorporated in Delaware in April 1998. Recent Dev"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 428,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.513014719446533,
+          "rerank_score": 0.62758607,
+          "relevant": false,
+          "preview": "For fiscal year 2024, sales to one direct customer represented 13% of total revenue, and were primarily attributable to the Compute & Networking segme"
+        }
+      ]
+    },
+    {
+      "id": "n02",
+      "question": "What was the $4.5 billion charge NVIDIA took in fiscal 2026 and what caused it?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.5865085120662109,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA took a $4.5 billion charge in the first quarter of fiscal 2026 for excess inventory and purchase obligations tied to H20 products. [1][2][3][5] It was caused by the U.S. government\u2019s licensing requirements for exporting H20 and other high-performance circuits to China and certain D:5 countries, which reduced demand for H20. [1][2]",
+      "claims": [
+        {
+          "claim": "NVIDIA took a $4.5 billion charge in the first quarter of fiscal 2026 for excess inventory and purchase obligations tied to H20 products.",
+          "cited_numbers": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The charge was caused by the U.S. government\u2019s licensing requirements for exporting H20 and other high-performance circuits to China and certain D:5 countries.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The licensing requirements reduced demand for H20.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 376,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.4456133215204825,
+          "rerank_score": 0.93688816,
+          "relevant": true,
+          "preview": "In October 2023, the USG announced new and updated licensing requirements for exports to China and Country Groups D:1, D:4, and D:5 (including but not"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 411,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.48813702765835587,
+          "rerank_score": 0.92984915,
+          "relevant": true,
+          "preview": "We continue to execute Data Center compute product introductions, bringing new advanced architectures on a one-year product cadence, including our Rub"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 416,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5448481619754418,
+          "rerank_score": 0.85396147,
+          "relevant": true,
+          "preview": "Automotive revenue for fiscal year 2026 was up 39% from a year ago, driven by continued adoption of our self-driving platforms. Gross margin decreased"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 426,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5865085120662109,
+          "rerank_score": 0.8434314,
+          "relevant": true,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 430,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.46104494216537284,
+          "rerank_score": 0.67198735,
+          "relevant": false,
+          "preview": "Provisions for inventory and excess inventory purchase obligations totaled $7.2 billion and $3.7 billion for fiscal years 2026 and 2025, respectively,"
+        }
+      ]
+    },
+    {
+      "id": "n03",
+      "question": "How fast did NVIDIA's Data Center revenue grow in fiscal 2025?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.7091224497139476,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA\u2019s Data Center revenue grew 142% year over year in fiscal 2025.[1]",
+      "claims": [
+        {
+          "claim": "NVIDIA\u2019s Data Center revenue grew 142% year over year in fiscal 2025.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 635,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6804688708365216,
+          "rerank_score": 0.92539185,
+          "relevant": true,
+          "preview": "Fiscal Year 2025 Summary | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 646,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6464629287143084,
+          "rerank_score": 0.8733121,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 426,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5941723660861682,
+          "rerank_score": 0.7660137,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 636,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.7091224497139476,
+          "rerank_score": 0.7610771,
+          "relevant": false,
+          "preview": "Gaming revenue for fiscal year 2025 was up 9% from a year ago, driven by sales of our GeForce RTX 40 Series GPUs. Professional Visualization revenue f"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 649,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.500618326600908,
+          "rerank_score": 0.71111006,
+          "relevant": false,
+          "preview": "Gross Profit and Gross Margin Gross profit consists of total net revenue less cost of revenue. Cost of revenue consists primarily of the cost of semic"
+        }
+      ]
+    },
+    {
+      "id": "n04",
+      "question": "Why did NVIDIA's gross margin fall in fiscal 2026?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6190518573783201,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA says gross margin decreased in fiscal year 2026 because its business model transitioned from offering Hopper HGX systems to Blackwell full-scale datacenter solutions, and because of a $4.5 billion charge associated with H20 excess inventory and purchase obligations. [1][2]\n\nIt also says inventory provisions and sales of previously written-down items had an unfavorable 2.6% impact on gross margin in fiscal year 2026. [3][5]",
+      "claims": [
+        {
+          "claim": "NVIDIA says gross margin decreased in fiscal year 2026 because its business model transitioned from offering Hopper HGX systems to Blackwell full-scale datacenter solutions, and because of a $4.5 billion charge associated with H20 excess inventory and purchase obligations.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "It also says inventory provisions and sales of previously written-down items had an unfavorable 2.6% impact on gross margin in fiscal year 2026.",
+          "cited_numbers": [
+            3,
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 429,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5956693443122034,
+          "rerank_score": 0.9097788,
+          "relevant": true,
+          "preview": "Gross Profit and Gross Margin Gross profit consists of total net revenue less cost of revenue. Cost of revenue consists of the cost of semiconductors,"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 416,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5821483742425163,
+          "rerank_score": 0.8697865,
+          "relevant": false,
+          "preview": "Automotive revenue for fiscal year 2026 was up 39% from a year ago, driven by continued adoption of our self-driving platforms. Gross margin decreased"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 430,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.4775283415847811,
+          "rerank_score": 0.8362071,
+          "relevant": false,
+          "preview": "Provisions for inventory and excess inventory purchase obligations totaled $7.2 billion and $3.7 billion for fiscal years 2026 and 2025, respectively,"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 415,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.6190518573783201,
+          "rerank_score": 0.785045,
+          "relevant": false,
+          "preview": "Fiscal Year 2026 Summary | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 419,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.488911729901625,
+          "rerank_score": 0.76320153,
+          "relevant": false,
+          "preview": "The net effect on our gross margin from inventory provisions and sales of items previously written down was an unfavorable impact of 2.6% in fiscal ye"
+        }
+      ]
+    },
+    {
+      "id": "n05",
+      "question": "Did a couple of big buyers account for a large share of NVIDIA's sales in fiscal 2026?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6388145539267369,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Yes. NVIDIA says that in fiscal 2026, sales to one direct customer were 22% of total revenue and sales to another direct customer were 14% of total revenue, so two direct customers accounted for a large share of sales. [1]",
+      "claims": [
+        {
+          "claim": "In fiscal 2026, sales to one direct customer were 22% of NVIDIA's total revenue.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "In fiscal 2026, sales to another direct customer were 14% of NVIDIA's total revenue.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Two direct customers accounted for a large share of NVIDIA's sales in fiscal 2026.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 427,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.6388145539267369,
+          "rerank_score": 0.8828729,
+          "relevant": true,
+          "preview": "40 * * * Table of Contents Concentration of Revenue We refer to customers who purchase products directly from NVIDIA as direct customers, such as AIBs"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 428,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5238269271729569,
+          "rerank_score": 0.68729424,
+          "relevant": false,
+          "preview": "For fiscal year 2024, sales to one direct customer represented 13% of total revenue, and were primarily attributable to the Compute & Networking segme"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 354,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5090352315930294,
+          "rerank_score": 0.6685341,
+          "relevant": false,
+          "preview": "We have experienced periods where we receive a significant amount of our revenue from a limited number of customers, and this trend may continue. For "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 426,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5492494498561168,
+          "rerank_score": 0.6615731,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 415,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5919553891574321,
+          "rerank_score": 0.6545415,
+          "relevant": false,
+          "preview": "Fiscal Year 2026 Summary | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan "
+        }
+      ]
+    },
+    {
+      "id": "n06",
+      "question": "How much stock did NVIDIA buy back in fiscal 2026?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.5424774762617552,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA repurchased 282 million shares of its common stock in fiscal year 2026. [1]",
+      "claims": [
+        {
+          "claim": "NVIDIA repurchased 282 million shares of its common stock in fiscal year 2026.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 436,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5342015177991627,
+          "rerank_score": 0.8759887,
+          "relevant": true,
+          "preview": "Except for approximately $1.7 billion of cash, cash equivalents, and marketable securities held outside the U.S. for which we have not accrued any rel"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 437,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.48663631514425065,
+          "rerank_score": 0.8096375,
+          "relevant": false,
+          "preview": "From January 26, 2026 through February 20, 2026, we repurchased 8 million shares for $1.5 billion pursuant to a pre-established trading plan. We may e"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 655,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5266501736498755,
+          "rerank_score": 0.60168713,
+          "relevant": false,
+          "preview": "Except for approximately $1.7 billion of cash, cash equivalents, and marketable securities held outside the U.S. for which we have not accrued any rel"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 434,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.43757767493984545,
+          "rerank_score": 0.4761899,
+          "relevant": false,
+          "preview": "* * * Table of Contents | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan 25, 2026| | Jan 26, 2025 | | | | (In "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 424,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5424774762617552,
+          "rerank_score": 0.42021888,
+          "relevant": false,
+          "preview": "Results of Operations A discussion regarding our financial condition and results of operations for fiscal year 2026 compared to fiscal year 2025 is pr"
+        }
+      ]
+    },
+    {
+      "id": "n07",
+      "question": "What did NVIDIA say about selling H200 chips into China?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.6334177460599189,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA said that in February 2026 the USG granted a license that would allow it to ship small amounts of H200 products to specific China-based customers. [1][2] It said it had not generated any revenue under the H200 licensing program to date and did not yet know whether any imports would be allowed into China. [1][2] NVIDIA also said the H200s would have to go through an inspection process in the United States before shipment, and any H200 shipped under the licensing program would be subject to a 25% tariff when imported into the United States. [1][2]",
+      "claims": [
+        {
+          "claim": "In February 2026 the USG granted a license that would allow NVIDIA to ship small amounts of H200 products to specific China-based customers.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA had not generated any revenue under the H200 licensing program to date.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA did not yet know whether any imports would be allowed into China.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The H200s would have to go through an inspection process in the United States before shipment.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Any H200 shipped under the licensing program would be subject to a 25% tariff when imported into the United States.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 377,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.49524992924739886,
+          "rerank_score": 0.8216746,
+          "relevant": false,
+          "preview": "In August 2025, the USG granted licenses that would allow us to ship certain H20 products to certain China-based customers. We generated approximately"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 412,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5408445263257391,
+          "rerank_score": 0.8216746,
+          "relevant": true,
+          "preview": "In February 2026, the USG granted a license that would allow us to ship small amounts of H200 products to specific China-based customers. To date, we "
+        },
+        {
+          "rank": 3,
+          "chunk_id": 588,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.6334177460599189,
+          "rerank_score": 0.81411195,
+          "relevant": false,
+          "preview": "26 * * * Table of Contents Over the past three years, we have been subject to a series of shifting and expanding export control restrictions, impactin"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 375,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5682568069155585,
+          "rerank_score": 0.7509913,
+          "relevant": false,
+          "preview": "Over the past three years, we have been subject to a series of shifting and expanding export control restrictions, impacting our ability to serve cust"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 382,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5449192345880157,
+          "rerank_score": 0.70383453,
+          "relevant": false,
+          "preview": "For example, the USG already imposed license conditions that limit the ability of foreign firms to create and offer as a service large-scale GPU clust"
+        }
+      ]
+    },
+    {
+      "id": "n08",
+      "question": "How does NVIDIA depend on TSMC and other chip manufacturers?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.4943039668160397,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA depends on foundries to manufacture its semiconductor wafers using their fabrication equipment and techniques, and it does not assemble, test, or package its products itself but instead contracts with independent subcontractors. [1] These subcontractors help procure components used in its systems, boards, and products. [1] NVIDIA says this dependence reduces its control over product quantity and quality, manufacturing yields, and product delivery schedules. [1] It also faces risks from a lack of guaranteed supply and capacity, supplier decommitments, and failures by foundries or contract manufacturers to procure raw materials or provide adequate manufacturing or test capacity. [1]",
+      "claims": [
+        {
+          "claim": "NVIDIA depends on foundries to manufacture its semiconductor wafers using their fabrication equipment and techniques.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA does not assemble, test, or package its products itself but instead contracts with independent subcontractors.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "These subcontractors help procure components used in NVIDIA's systems, boards, and products.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says this dependence reduces its control over product quantity and quality, manufacturing yields, and product delivery schedules.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA faces risks from a lack of guaranteed supply and capacity, supplier decommitments, and failures by foundries or contract manufacturers to procure raw materials or provide adequate manufacturing or test capacity.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 323,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.44345632108328936,
+          "rerank_score": 0.7589397,
+          "relevant": true,
+          "preview": "Dependency on third-party suppliers and their technology to manufacture, assemble, test, or package our products reduces our control over product quan"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 536,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4423041877115228,
+          "rerank_score": 0.7567892,
+          "relevant": true,
+          "preview": "Dependency on third-party suppliers and their technology to manufacture, assemble, test, or package our products reduces our control over product quan"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 537,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.38857038412766887,
+          "rerank_score": 0.5790196,
+          "relevant": false,
+          "preview": "\u2022failure by our foundries or contract manufacturers to procure raw materials or provide adequate levels of manufacturing or test capacity for our prod"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 316,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.4943039668160397,
+          "rerank_score": 0.56946963,
+          "relevant": false,
+          "preview": "\u2022the availability of third-party content on our platforms, such as GeForce NOW. The availability of data centers, energy, and capital to support the b"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 324,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.4020675657024808,
+          "rerank_score": 0.5405358,
+          "relevant": false,
+          "preview": "\u2022failure by our foundries or contract manufacturers to procure raw materials or provide adequate levels of manufacturing or test capacity for our prod"
+        }
+      ]
+    },
+    {
+      "id": "n09",
+      "question": "What was the AI Diffusion rule and how would it have limited NVIDIA's exports?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.620076467216004,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "The AI Diffusion IFR was a U.S. government export rule published on January 15, 2025 that, unless modified, would have imposed a worldwide licensing requirement on NVIDIA products classified under certain ECCNs, including related software and technology, and on systems incorporating covered integrated circuits such as DGX, HGX, and MGX systems. [4][5]\n\nIt would also have divided the world into three tiers, with most countries becoming \u201cTier 2,\u201d and would have created a complex licensing scheme for approvals. [2][4]\n\nThe rule would have limited NVIDIA\u2019s exports by expressly restricting exports, reexports, and transfers of covered products to Tier 2 countries and to certain companies in Tier 1 that were headquartered in Tier 2 or had an ultimate parent headquartered in a Tier 2 country. [1]\n\nIt would have applied to products sold years ago, and it would have covered products such as A100, A800, H100, H200, H800, B100, B200, GB200, L4, L40S, and RTX 6000 Ada unless a license exception was available. [1][4][5]\n\nThe excerpts say these restrictions could reduce the market for U.S.-designed and manufactured computing products and services and negatively impact NVIDIA\u2019s business, revenue, and financial results. [1][3]",
+      "claims": [
+        {
+          "claim": "The AI Diffusion IFR was a U.S. government export rule published on January 15, 2025.",
+          "cited_numbers": [
+            4,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Unless modified, it would have imposed a worldwide licensing requirement on NVIDIA products classified under certain ECCNs, including related software and technology, and on systems incorporating covered integrated circuits such as DGX, HGX, and MGX systems.",
+          "cited_numbers": [
+            4,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "It would also have divided the world into three tiers, with most countries becoming \u201cTier 2,\u201d and would have created a complex licensing scheme for approvals.",
+          "cited_numbers": [
+            2,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The rule would have limited NVIDIA\u2019s exports by expressly restricting exports, reexports, and transfers of covered products to Tier 2 countries and to certain companies in Tier 1 that were headquartered in Tier 2 or had an ultimate parent headquartered in a Tier 2 country.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "It would have applied to products sold years ago, and it would have covered products such as A100, A800, H100, H200, H800, B100, B200, GB200, L4, L40S, and RTX 6000 Ada unless a license exception was available.",
+          "cited_numbers": [
+            1,
+            4,
+            5
+          ],
+          "supported": false
+        },
+        {
+          "claim": "The excerpts say these restrictions could reduce the market for U.S.-designed and manufactured computing products and services and negatively impact NVIDIA\u2019s business, revenue, and financial results.",
+          "cited_numbers": [
+            1,
+            3
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 591,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.620076467216004,
+          "rerank_score": 0.92752105,
+          "relevant": true,
+          "preview": "The AI Diffusion IFR would divide the world into three tiers, relegating most countries to \"Tier 2\" status. The AI Diffusion IFR would confer special "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 379,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5725002170523202,
+          "rerank_score": 0.91538626,
+          "relevant": true,
+          "preview": "In addition to controls targeting D:1, D:4 and D:5 countries, the USG has also imposed worldwide export controls impacting our products, and may impos"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 583,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.6061421990528368,
+          "rerank_score": 0.90635514,
+          "relevant": true,
+          "preview": "Such restrictions could include additional unilateral or multilateral export controls on certain products or technology, including but not limited to "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 590,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.611068040453901,
+          "rerank_score": 0.8836784,
+          "relevant": true,
+          "preview": "On January 15, 2025, the USG published the \"AI Diffusion\" IFR in the Federal Register. After a 120-day delayed compliance period, the IFR will, unless"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 631,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6111591300244795,
+          "rerank_score": 0.8836784,
+          "relevant": true,
+          "preview": "On January 15, 2025, the USG published the \"AI Diffusion\" IFR in the Federal Register. After a 120-day delayed compliance period, the IFR will, unless"
+        }
+      ]
+    },
+    {
+      "id": "n10",
+      "question": "Why could an earthquake in Asia disrupt NVIDIA's business?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.5718214863497468,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "An earthquake in Asia could disrupt NVIDIA\u2019s business because some of its critical business operations, finished goods inventory, and suppliers are located in Asia, so natural disasters there can cause business disruptions affecting operations and supply continuity. [2][1]\n\n",
+      "claims": [
+        {
+          "claim": "An earthquake in Asia could disrupt NVIDIA\u2019s business because some of its critical business operations, finished goods inventory, and suppliers are located in Asia.",
+          "cited_numbers": [
+            2,
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Natural disasters in those geographical areas can cause business disruptions affecting operations and supply continuity.",
+          "cited_numbers": [
+            2,
+            1
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 342,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5272290026308758,
+          "rerank_score": 0.8317452,
+          "relevant": true,
+          "preview": "actions, epidemics or pandemics, abrupt regulatory changes, and other natural or man-made disasters and catastrophic events. Our corporate headquarter"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 557,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.47943604625733727,
+          "rerank_score": 0.82224625,
+          "relevant": true,
+          "preview": "Factors that have caused and/or could in the future cause disruptions to our worldwide operations include: natural disasters, extreme weather conditio"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 597,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5718214863497468,
+          "rerank_score": 0.6633201,
+          "relevant": false,
+          "preview": "gaming products, it may disrupt a significant portion of our supply and distribution chain and negatively impact sales of such products to markets out"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 316,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.559430548670307,
+          "rerank_score": 0.6294102,
+          "relevant": false,
+          "preview": "\u2022the availability of third-party content on our platforms, such as GeForce NOW. The availability of data centers, energy, and capital to support the b"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 372,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5142549741039867,
+          "rerank_score": 0.59417456,
+          "relevant": false,
+          "preview": "25 * * * Table of Contents and financial results. Export controls targeting GPUs and semiconductors associated with AI have subjected and may in the f"
+        }
+      ]
+    },
+    {
+      "id": "n11",
+      "question": "What does NVIDIA say about climate change affecting its business?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 3,
+      "best_similarity": 0.6088507430677672,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA says climate change may have a long-term impact on its business and could increasingly adversely affect its business, customers, partners, and vendors. [3][4] It says water and energy availability and reliability are critical, certain facilities may be vulnerable to extreme weather, and wildfire-related power shutoffs in Northern California could affect its headquarters and data centers and impair employees\u2019 ability to work effectively. [3][4] NVIDIA also says climate change could disrupt its supply chain and critical infrastructure, increase political instability, and lead to higher attrition, losses, and costs to maintain or resume operations. [3][4] It adds that losses not covered by insurance could be large and could hurt its results of operations and financial condition. [3][4] NVIDIA further says climate-related laws, regulations, and lawsuits could increase costs, require changes to manufacturing and operations, and create reputational harm or litigation risk. [5]",
+      "claims": [
+        {
+          "claim": "NVIDIA says climate change may have a long-term impact on its business and could increasingly adversely affect its business, customers, partners, and vendors.",
+          "cited_numbers": [
+            3,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says water and energy availability and reliability are critical, certain facilities may be vulnerable to extreme weather, and wildfire-related power shutoffs in Northern California could affect its headquarters and data centers and impair employees\u2019 ability to work effectively.",
+          "cited_numbers": [
+            3,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says climate change could disrupt its supply chain and critical infrastructure, increase political instability, and lead to higher attrition, losses, and costs to maintain or resume operations.",
+          "cited_numbers": [
+            3,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says losses not covered by insurance could be large and could hurt its results of operations and financial condition.",
+          "cited_numbers": [
+            3,
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says climate-related laws, regulations, and lawsuits could increase costs, require changes to manufacturing and operations, and create reputational harm or litigation risk.",
+          "cited_numbers": [
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 348,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.6088507430677672,
+          "rerank_score": 0.8132236,
+          "relevant": false,
+          "preview": "We also face risks related to business trends that may be influenced by climate change concerns. Our business could be negatively impacted by concerns"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 564,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5970903207667326,
+          "rerank_score": 0.80075437,
+          "relevant": false,
+          "preview": "We also face risks related to business trends that may be influenced by climate change concerns. Our business could be negatively impacted by concerns"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 346,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5617280025992504,
+          "rerank_score": 0.77225596,
+          "relevant": true,
+          "preview": "Climate change may have a long-term impact on our business. Climate change may have an increasingly adverse impact on our business and on our customer"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 562,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5617347615648436,
+          "rerank_score": 0.77225596,
+          "relevant": true,
+          "preview": "Climate change may have a long-term impact on our business. Climate change may have an increasingly adverse impact on our business and on our customer"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 563,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4871604445462273,
+          "rerank_score": 0.72766596,
+          "relevant": false,
+          "preview": "Our business and those of our suppliers and customers may also be subject to climate-related laws, regulations and lawsuits. New or proposed regulatio"
+        }
+      ]
+    },
+    {
+      "id": "n12",
+      "question": "Could takeover protections stop a buyer from acquiring NVIDIA?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.634740474241062,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Yes. NVIDIA says its anti-takeover provisions under Delaware law, along with provisions in its certificate of incorporation, bylaws, and agreement with Microsoft, could delay or prevent a change in control and make it more difficult for a third party to acquire a majority of its stock. [1][2]",
+      "claims": [
+        {
+          "claim": "NVIDIA's anti-takeover provisions under Delaware law, along with provisions in its certificate of incorporation, bylaws, and agreement with Microsoft, could delay or prevent a change in control and make it more difficult for a third party to acquire a majority of its stock.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 622,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.634740474241062,
+          "rerank_score": 0.8187948,
+          "relevant": true,
+          "preview": "Delaware law and our certificate of incorporation, bylaws and agreement with Microsoft could delay or prevent a change in control. The anti-takeover p"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 408,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.614774831765867,
+          "rerank_score": 0.81411195,
+          "relevant": true,
+          "preview": "31 * * * Table of Contents Delaware law and our certificate of incorporation, bylaws and agreement with Microsoft could delay or prevent a change in c"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 384,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.4740429057549551,
+          "rerank_score": 0.44707403,
+          "relevant": false,
+          "preview": "Export controls restricting our ability to sell data center GPUs may also negatively impact demand for our networking products used in servers contain"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 598,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.4738493927613452,
+          "rerank_score": 0.41641688,
+          "relevant": false,
+          "preview": "certain U.S. semiconductors from their products to reduce the compliance burden and risk, and to ensure that they are able to serve markets worldwide."
+        },
+        {
+          "rank": 5,
+          "chunk_id": 578,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.48135093095794834,
+          "rerank_score": 0.40507212,
+          "relevant": false,
+          "preview": "to their interpretation and enforcement, could lead to materially greater compliance and other costs, and/or further restrictions on our ability to ma"
+        }
+      ]
+    },
+    {
+      "id": "n13",
+      "question": "What risks does NVIDIA see in buying or investing in other companies?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.5753813689980423,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVIDIA says buying or investing in other companies can divert capital and management attention, and there may be difficulty realizing a satisfactory return or the expected benefits, or no benefit at all. [1][5]\n\nIt also says there can be difficulty or inability obtaining governmental or regulatory approvals, other consents, or financing, and there may be legal proceedings tied to an acquisition or investment. [1][5]\n\nNVIDIA says its due diligence may fail to identify significant issues with the assets or company being acquired or invested in. [1][5]\n\nIt also lists integration risks, including integrating technology, systems, products, policies, processes, operations, employees, and key personnel, as well as accounting, forecasting, controls, procedures, and reporting cycles. [1][5]\n\nNVIDIA says acquisitions can lead to assumed liabilities, amortization expenses, impairment charges to goodwill, or write-downs of acquired assets, and can involve coordinating operations in countries where it does not currently operate. [1][5]\n\nIt says failure to obtain regulatory approval or to close an acquisition could cause stock price impact, fines, fees, or reputational harm. [1]\n\nIt also says acquisitions or investments could impair its ability to grow its business, develop new products, or sell its products, and its investments in publicly traded companies could create volatility in results and losses up to the value of the investment. [2][3]",
+      "claims": [
+        {
+          "claim": "NVIDIA says buying or investing in other companies can divert capital and management attention.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says there may be difficulty realizing a satisfactory return or the expected benefits, or no benefit at all, from buying or investing in other companies.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says there can be difficulty or inability obtaining governmental or regulatory approvals, other consents, or financing.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says there may be legal proceedings tied to an acquisition or investment.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says its due diligence may fail to identify significant issues with the assets or company being acquired or invested in.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says acquisitions can involve difficulty integrating technology, systems, products, policies, processes, operations, employees, and key personnel.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says acquisitions can involve difficulty integrating accounting, forecasting, controls, procedures, and reporting cycles.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says acquisitions can lead to assumed liabilities, amortization expenses, impairment charges to goodwill, or write-downs of acquired assets.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says acquisitions can involve coordinating operations in countries where it does not currently operate.",
+          "cited_numbers": [
+            1,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says failure to obtain regulatory approval or to close an acquisition could cause stock price impact, fines, fees, or reputational harm.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says acquisitions or investments could impair its ability to grow its business, develop new products, or sell its products.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says its investments in publicly traded companies could create volatility in results and losses up to the value of the investment.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 567,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5263069733612914,
+          "rerank_score": 0.8339206,
+          "relevant": true,
+          "preview": "We face additional risks related to acquisitions and strategic investments, including the diversion of capital and other resources, including manageme"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 565,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5170241164563176,
+          "rerank_score": 0.81908435,
+          "relevant": false,
+          "preview": "We acquire and invest in businesses that offer products, services and technologies that we believe will help expand or enhance our strategic objective"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 348,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5753813689980423,
+          "rerank_score": 0.81470233,
+          "relevant": false,
+          "preview": "We also face risks related to business trends that may be influenced by climate change concerns. Our business could be negatively impacted by concerns"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 564,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5704149667977576,
+          "rerank_score": 0.80323553,
+          "relevant": false,
+          "preview": "We also face risks related to business trends that may be influenced by climate change concerns. Our business could be negatively impacted by concerns"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 351,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5225643636312516,
+          "rerank_score": 0.79981786,
+          "relevant": true,
+          "preview": "Our investment portfolio contains industry sector concentration risks, and a decline in any one or multiple industry sectors could increase our impair"
+        }
+      ]
+    },
+    {
+      "id": "n14",
+      "question": "How might free, open AI models change demand for NVIDIA's products?",
+      "ticker": "NVDA",
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.5877383565064161,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "The excerpt says that the rise in high-quality open-source foundation models could make advanced AI capabilities broadly accessible, and if those open-source AI models are deployed on competitors\u2019 platforms, that could reduce demand for NVIDIA\u2019s products and services.[1]\n\nIt also says NVIDIA cannot estimate with precision the impact of generative AI models on reported revenue or forecasted demand, which suggests demand effects are uncertain.[2]",
+      "claims": [
+        {
+          "claim": "The rise in high-quality open-source foundation models could make advanced AI capabilities broadly accessible.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "If open-source AI models are deployed on competitors\u2019 platforms, that could reduce demand for NVIDIA\u2019s products and services.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA cannot estimate with precision the impact of generative AI models on reported revenue or forecasted demand.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "This suggests demand effects are uncertain.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": false
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 412,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5034775306177702,
+          "rerank_score": 0.80630416,
+          "relevant": true,
+          "preview": "In February 2026, the USG granted a license that would allow us to ship small amounts of H200 products to specific China-based customers. To date, we "
+        },
+        {
+          "rank": 2,
+          "chunk_id": 533,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5151102562306319,
+          "rerank_score": 0.6456563,
+          "relevant": false,
+          "preview": "We incur significant engineering development resources for new products, and changes to our product roadmap may impact our ability to develop other pr"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 316,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5877383565064161,
+          "rerank_score": 0.603558,
+          "relevant": false,
+          "preview": "\u2022the availability of third-party content on our platforms, such as GeForce NOW. The availability of data centers, energy, and capital to support the b"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 320,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.477772466271716,
+          "rerank_score": 0.59981334,
+          "relevant": false,
+          "preview": "We incur significant engineering development resources for new products, and changes to our product roadmap may impact our ability to develop other pr"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 321,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.4963025420921977,
+          "rerank_score": 0.59417456,
+          "relevant": false,
+          "preview": "The use of our GPUs for new, mercurial, or trendy applications, has impacted and can impact in the future, demand for our products, including by leadi"
+        }
+      ]
+    },
+    {
+      "id": "c01",
+      "question": "How do Apple and NVIDIA each describe their dependence on manufacturing partners?",
+      "ticker": null,
+      "answerable": true,
+      "rank": 2,
+      "best_similarity": 0.5500418114604874,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says it depends on component and product manufacturing and logistical services from outsourcing partners, many of which are outside the U.S. [1] Apple also says it relies on single-source outsourcing partners in the U.S., Asia, and Europe to supply and manufacture many components, and on outsourcing partners primarily in Asia for final assembly of substantially all of its hardware products. [4]\n\nNVIDIA says it depends on third-party suppliers and their technology to manufacture, assemble, test, or package its products, which reduces its control over product quantity and quality, manufacturing yields, and product delivery schedules. [2] NVIDIA also says it depends on foundries to manufacture its semiconductor wafers and uses independent subcontractors rather than assembling, testing, or packaging its products itself. [2]",
+      "claims": [
+        {
+          "claim": "Apple says it depends on component and product manufacturing and logistical services from outsourcing partners, many of which are outside the U.S.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says it relies on single-source outsourcing partners in the U.S., Asia, and Europe to supply and manufacture many components, and on outsourcing partners primarily in Asia for final assembly of substantially all of its hardware products.",
+          "cited_numbers": [
+            4
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says it depends on third-party suppliers and their technology to manufacture, assemble, test, or package its products, which reduces its control over product quantity and quality, manufacturing yields, and product delivery schedules.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says it depends on foundries to manufacture its semiconductor wafers and uses independent subcontractors rather than assembling, testing, or packaging its products itself.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 453,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5500418114604874,
+          "rerank_score": 0.72299665,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 7 * * * The Company depends on component and product manufacturing and logistical services provided by outsourcing partn"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 323,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.44366335830456727,
+          "rerank_score": 0.680539,
+          "relevant": true,
+          "preview": "Dependency on third-party suppliers and their technology to manufacture, assemble, test, or package our products reduces our control over product quan"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 536,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.44315264555839495,
+          "rerank_score": 0.6771325,
+          "relevant": true,
+          "preview": "Dependency on third-party suppliers and their technology to manufacture, assemble, test, or package our products reduces our control over product quan"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 455,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.4945625324917027,
+          "rerank_score": 0.6685341,
+          "relevant": false,
+          "preview": "The Company relies on single-source outsourcing partners in the U.S., Asia and Europe to supply and manufacture many components, and on outsourcing pa"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 458,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.5159089405162636,
+          "rerank_score": 0.6650626,
+          "relevant": false,
+          "preview": "The Company's new products often utilize custom components available from only one source. When a component or product uses new technologies, initial "
+        }
+      ]
+    },
+    {
+      "id": "c02",
+      "question": "Which companies warn that earthquakes could disrupt their suppliers?",
+      "ticker": null,
+      "answerable": true,
+      "rank": 1,
+      "best_similarity": 0.6057127032752052,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple and Nvidia both warn that earthquakes could disrupt their suppliers. Apple says its suppliers\u2019 operations and facilities are in locations prone to earthquakes and other natural disasters, and that such events can disrupt its supply chain [1][2]. Nvidia says its operations and some of its suppliers are located in areas vulnerable to natural disasters such as earthquakes, and that disruptions can affect suppliers and manufacturing [3][5].",
+      "claims": [
+        {
+          "claim": "Apple and Nvidia both warn that earthquakes could disrupt their suppliers.",
+          "cited_numbers": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says its suppliers\u2019 operations and facilities are in locations prone to earthquakes and other natural disasters.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says such events can disrupt its supply chain.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Nvidia says its operations and some of its suppliers are located in areas vulnerable to natural disasters such as earthquakes.",
+          "cited_numbers": [
+            3,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Nvidia says disruptions can affect suppliers and manufacturing.",
+          "cited_numbers": [
+            3,
+            5
+          ],
+          "supported": false
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 446,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.6057127032752052,
+          "rerank_score": 0.6438669,
+          "relevant": true,
+          "preview": "Many of the Company's operations and facilities, as well as critical business operations of the Company's suppliers and contract manufacturers, are in"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 83,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5983487289197384,
+          "rerank_score": 0.6110107,
+          "relevant": true,
+          "preview": "Many of the Company's operations, retail stores and facilities, as well as critical business operations of the Company's suppliers and contract manufa"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 342,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5086853337201274,
+          "rerank_score": 0.58472174,
+          "relevant": true,
+          "preview": "actions, epidemics or pandemics, abrupt regulatory changes, and other natural or man-made disasters and catastrophic events. Our corporate headquarter"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 325,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5232474698257749,
+          "rerank_score": 0.5598677,
+          "relevant": false,
+          "preview": "\u2022suppliers or their suppliers failing to provide high quality products and/or making changes to their products without our qualification; 17 * * * Tab"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 557,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5228882632358187,
+          "rerank_score": 0.5560139,
+          "relevant": true,
+          "preview": "Factors that have caused and/or could in the future cause disruptions to our worldwide operations include: natural disasters, extreme weather conditio"
+        }
+      ]
+    },
+    {
+      "id": "c03",
+      "question": "How do Apple and NVIDIA each describe the effect of government trade restrictions on their business?",
+      "ticker": null,
+      "answerable": true,
+      "rank": 3,
+      "best_similarity": 0.5769011143981326,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "I don\u2019t know about Apple from the excerpts provided.  \n\nNVIDIA says government export controls can disrupt its supply and distribution chain, restrict its ability to sell GPUs and related products, reduce demand for its networking products, and negatively impact its business, market position, revenue, and financial results. [1][2][3][4][5]",
+      "claims": [
+        {
+          "claim": "I don\u2019t know about Apple from the excerpts provided.",
+          "cited_numbers": [],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says government export controls can disrupt its supply and distribution chain.",
+          "cited_numbers": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says government export controls can restrict its ability to sell GPUs and related products.",
+          "cited_numbers": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says government export controls can reduce demand for its networking products.",
+          "cited_numbers": [
+            1,
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says government export controls can negatively impact its business, market position, revenue, and financial results.",
+          "cited_numbers": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 597,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5538046303872345,
+          "rerank_score": 0.7909182,
+          "relevant": false,
+          "preview": "gaming products, it may disrupt a significant portion of our supply and distribution chain and negatively impact sales of such products to markets out"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 384,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5769011143981326,
+          "rerank_score": 0.785045,
+          "relevant": false,
+          "preview": "Export controls restricting our ability to sell data center GPUs may also negatively impact demand for our networking products used in servers contain"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 596,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5378569059082582,
+          "rerank_score": 0.76949626,
+          "relevant": true,
+          "preview": "Given the increasing strategic importance of AI and rising geopolitical tensions, the USG has changed and may again change the export control rules at"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 598,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5569632017927248,
+          "rerank_score": 0.76741105,
+          "relevant": true,
+          "preview": "certain U.S. semiconductors from their products to reduce the compliance burden and risk, and to ensure that they are able to serve markets worldwide."
+        },
+        {
+          "rank": 5,
+          "chunk_id": 583,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5551982128476196,
+          "rerank_score": 0.74212277,
+          "relevant": false,
+          "preview": "Such restrictions could include additional unilateral or multilateral export controls on certain products or technology, including but not limited to "
+        }
+      ]
+    },
+    {
+      "id": "c04",
+      "question": "How do Apple and NVIDIA each describe competition in their markets?",
+      "ticker": null,
+      "answerable": true,
+      "rank": 4,
+      "best_similarity": 0.5692317465925164,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "Apple says its products and services face substantial competition from companies with significant technical, marketing, distribution, and other resources, and that competitors imitate Apple\u2019s product features and applications as well as its approach to integrated offerings. [1] Apple also says competition is especially intense because some competitors have broad product lines, low-priced products, large installed bases, and large customer bases, and because competitors have aggressively cut prices and lowered margins. [1] Apple further says it has a minority market share in the global smartphone, personal computer, tablet, and wearables markets, and that some of the markets it competes in have had little or no growth or have contracted overall. [1]\n\nNVIDIA says regulators have taken increased interest in its business because of its position in AI-related markets, and that it has received broad requests for information from competition regulators in multiple regions about its sales, supply allocation, foundation models, investments, partnerships, market positions, strategies, roadmaps, and product and system development efforts. [2][3] NVIDIA says these requests have been and are likely to be expensive and burdensome, and could negatively impact its business. [2]",
+      "claims": [
+        {
+          "claim": "Apple says its products and services face substantial competition from companies with significant technical, marketing, distribution, and other resources.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says competitors imitate Apple\u2019s product features and applications as well as its approach to integrated offerings.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says competition is especially intense because some competitors have broad product lines, low-priced products, large installed bases, and large customer bases.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says competitors have aggressively cut prices and lowered margins.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says it has a minority market share in the global smartphone, personal computer, tablet, and wearables markets.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple says some of the markets it competes in have had little or no growth or have contracted overall.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says regulators have taken increased interest in its business because of its position in AI-related markets.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says it has received broad requests for information from competition regulators in multiple regions about its sales, supply allocation, foundation models, investments, partnerships, market positions, strategies, roadmaps, and product and system development efforts.",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says these requests have been and are likely to be expensive and burdensome.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        },
+        {
+          "claim": "NVIDIA says these requests could negatively impact its business.",
+          "cited_numbers": [
+            2
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 88,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5692317465925164,
+          "rerank_score": 0.6822351,
+          "relevant": false,
+          "preview": "The Company's products and services face substantial competition from companies that have significant technical, marketing, distribution and other res"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 365,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.5033603109188847,
+          "rerank_score": 0.6384747,
+          "relevant": false,
+          "preview": "we may face increased compliance costs as a result of changes or increases in antitrust legislation, regulation, administrative rule making, increased"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 578,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.5107500576718721,
+          "rerank_score": 0.6257583,
+          "relevant": false,
+          "preview": "to their interpretation and enforcement, could lead to materially greater compliance and other costs, and/or further restrictions on our ability to ma"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 448,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.43158553410990086,
+          "rerank_score": 0.60542583,
+          "relevant": true,
+          "preview": "Following any interruption to its business, the Company can require substantial recovery time, experience significant expenditures to resume operation"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 85,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.447637534060501,
+          "rerank_score": 0.5885108,
+          "relevant": true,
+          "preview": "Apple Inc. | 2025 Form 10-K | 6 * * * Following any interruption to its business, the Company can require substantial recovery time, incur significant"
+        }
+      ]
+    },
+    {
+      "id": "c05",
+      "question": "How much cash and marketable securities did each company hold at the end of its latest fiscal year?",
+      "ticker": null,
+      "answerable": true,
+      "rank": 3,
+      "best_similarity": 0.6077611525229709,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "NVDA held $62.6 billion in cash, cash equivalents, and marketable securities at the end of its latest fiscal year (Jan. 25, 2026). [2][3]\n\nApple held $140.8 billion in unrestricted cash, cash equivalents, and marketable securities at the end of its latest fiscal year (Sept. 28, 2024). [5]",
+      "claims": [
+        {
+          "claim": "NVDA held $62.6 billion in cash, cash equivalents, and marketable securities at the end of its latest fiscal year (Jan. 25, 2026).",
+          "cited_numbers": [
+            2,
+            3
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple held $140.8 billion in unrestricted cash, cash equivalents, and marketable securities at the end of its latest fiscal year (Sept. 28, 2024).",
+          "cited_numbers": [
+            5
+          ],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 653,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.582458830087047,
+          "rerank_score": 0.82760537,
+          "relevant": false,
+          "preview": "Refer to Note 13 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional informati"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 433,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5026412550603809,
+          "rerank_score": 0.8013768,
+          "relevant": false,
+          "preview": "Our effective tax rates for fiscal years 2026 and 2025 were lower than the U.S. federal statutory rate of 21.0% primarily due to tax benefits from FDD"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 435,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.6077611525229709,
+          "rerank_score": 0.6839264,
+          "relevant": true,
+          "preview": "Cash used in financing activities increased in fiscal year 2026 compared to fiscal year 2025, mainly due to higher share repurchases. Liquidity Our pr"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 654,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5961310432138024,
+          "rerank_score": 0.67370707,
+          "relevant": false,
+          "preview": "Cash used in financing activities increased in fiscal year 2025 compared to fiscal year 2024, mainly due to higher share repurchases and higher tax pa"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 511,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.5499369041970507,
+          "rerank_score": 0.62758607,
+          "relevant": false,
+          "preview": "The Company's effective tax rate for 2024 was higher compared to 2023 due primarily to a one-time income tax charge of $10.2 billion, net, related to "
+        }
+      ]
+    },
+    {
+      "id": "u01",
+      "question": "What was the total pay of NVIDIA's chief executive last year, including stock awards?",
+      "ticker": null,
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.5407807634189133,
+      "rejected_by_threshold": false,
+      "abstained": true,
+      "source_count": 5,
+      "answer": "I don\u2019t know. The excerpts provided do not mention NVIDIA\u2019s chief executive compensation or total pay, including stock awards.",
+      "claims": [],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 430,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.35498707919569394,
+          "rerank_score": 0.40507212,
+          "relevant": false,
+          "preview": "Provisions for inventory and excess inventory purchase obligations totaled $7.2 billion and $3.7 billion for fiscal years 2026 and 2025, respectively,"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 647,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5285280533743478,
+          "rerank_score": 0.40131235,
+          "relevant": false,
+          "preview": "All Other operating loss - The year over year increase was due to an increase in stock-based compensation expense reflecting employee growth and compe"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 646,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5129611585739327,
+          "rerank_score": 0.3938279,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 644,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.5407807634189133,
+          "rerank_score": 0.38269496,
+          "relevant": false,
+          "preview": "Results of Operations A discussion regarding our financial condition and results of operations for fiscal year 2025 compared to fiscal year 2024 is pr"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 415,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.4597178325698841,
+          "rerank_score": 0.3644156,
+          "relevant": false,
+          "preview": "Fiscal Year 2026 Summary | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year Ended | Jan "
+        }
+      ]
+    },
+    {
+      "id": "u02",
+      "question": "What will Apple's stock price be at the end of next year?",
+      "ticker": "AAPL",
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.567266793271697,
+      "rejected_by_threshold": false,
+      "abstained": false,
+      "source_count": 5,
+      "answer": "I don\u2019t know. The excerpts say Apple\u2019s stock price is subject to volatility and may decline significantly if expectations are not met, but they do not provide enough information to predict what Apple\u2019s stock price will be at the end of next year. [1]",
+      "claims": [
+        {
+          "claim": "Apple\u2019s stock price is subject to volatility.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "Apple\u2019s stock price may decline significantly if expectations are not met.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The excerpts do not provide enough information to predict what Apple\u2019s stock price will be at the end of next year.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": false
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 141,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.567266793271697,
+          "rerank_score": 0.658066,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 16 * * * General Risks The price of the Company's stock is subject to volatility. The Company's stock has experienced su"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 507,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.5250490287294194,
+          "rerank_score": 0.6438669,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 22 * * * Products and Services Performance The following table shows net sales by category for 2024, 2023 and 2022 (doll"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.49960903239160737,
+          "rerank_score": 0.61286587,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 513,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.501156968806965,
+          "rerank_score": 0.59417456,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 25 * * * State Aid Decision Tax Payable As of September 28, 2024, the Company had an obligation to pay \u20ac14.2 billion or "
+        },
+        {
+          "rank": 5,
+          "chunk_id": 118,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.411149769580923,
+          "rerank_score": 0.57329625,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 12 * * * The outcome of litigation or government investigations is inherently uncertain. If one or more legal matters we"
+        }
+      ]
+    },
+    {
+      "id": "u03",
+      "question": "How much revenue did NVIDIA report for fiscal year 2022?",
+      "ticker": "NVDA",
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.6602020767894838,
+      "rejected_by_threshold": false,
+      "abstained": true,
+      "source_count": 5,
+      "answer": "I don\u2019t know.",
+      "claims": [],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 646,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6602020767894838,
+          "rerank_score": 0.45868814,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 426,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5976492500995431,
+          "rerank_score": 0.42021888,
+          "relevant": false,
+          "preview": "| | | | | | | | | | | | | | | | | | | | | | | ---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|--- | Year E"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 427,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.5986795950493115,
+          "rerank_score": 0.38639295,
+          "relevant": false,
+          "preview": "40 * * * Table of Contents Concentration of Revenue We refer to customers who purchase products directly from NVIDIA as direct customers, such as AIBs"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 644,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6481121742206916,
+          "rerank_score": 0.38269496,
+          "relevant": false,
+          "preview": "Results of Operations A discussion regarding our financial condition and results of operations for fiscal year 2025 compared to fiscal year 2024 is pr"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 647,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6269896297808446,
+          "rerank_score": 0.37168384,
+          "relevant": false,
+          "preview": "All Other operating loss - The year over year increase was due to an increase in stock-based compensation expense reflecting employee growth and compe"
+        }
+      ]
+    },
+    {
+      "id": "u04",
+      "question": "How many iPhone units did Apple sell in fiscal 2025?",
+      "ticker": "AAPL",
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.6352877308873712,
+      "rejected_by_threshold": false,
+      "abstained": true,
+      "source_count": 5,
+      "answer": "I don\u2019t know. The excerpts provide iPhone net sales, but they do not state how many iPhone units Apple sold in fiscal 2025.",
+      "claims": [
+        {
+          "claim": "The excerpts provide iPhone net sales.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": true
+        },
+        {
+          "claim": "The excerpts do not state how many iPhone units Apple sold in fiscal 2025.",
+          "cited_numbers": [
+            1
+          ],
+          "supported": false
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 147,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.6352877308873712,
+          "rerank_score": 0.7736271,
+          "relevant": false,
+          "preview": "Greater China Greater China net sales decreased during 2025 compared to 2024 primarily due to lower net sales of iPhone, partially offset by higher ne"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 146,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.4882580081858878,
+          "rerank_score": 0.7174872,
+          "relevant": false,
+          "preview": "Segment Operating Performance The following table shows net sales by reportable segment for 2025, 2024 and 2023 (dollars in millions): | | | | | | | |"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 148,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.609034314152998,
+          "rerank_score": 0.6402761,
+          "relevant": false,
+          "preview": "iPhone iPhone net sales increased during 2025 compared to 2024 due to higher net sales of Pro models. Mac Mac net sales increased during 2025 compared"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 143,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.618977165887422,
+          "rerank_score": 0.57138395,
+          "relevant": false,
+          "preview": "Fourth Quarter 2025: \u2022iPhone 17, iPhone Air, iPhone 17 Pro and iPhone 17 Pro Max \u2022Apple Watch Series 11, Apple Watch SE 3 and Apple Watch Ultra 3 \u2022Air"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 507,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "mdna",
+          "vector_similarity": 0.6156393844847099,
+          "rerank_score": 0.5579416,
+          "relevant": false,
+          "preview": "Apple Inc. | 2024 Form 10-K | 22 * * * Products and Services Performance The following table shows net sales by category for 2024, 2023 and 2022 (doll"
+        }
+      ]
+    },
+    {
+      "id": "u05",
+      "question": "What is the price and driving range of Apple's electric car?",
+      "ticker": "AAPL",
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.3293479440827157,
+      "rejected_by_threshold": false,
+      "abstained": true,
+      "source_count": 2,
+      "answer": "I don\u2019t know. The excerpts do not mention Apple having an electric car, or any price or driving range for one.",
+      "claims": [],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 135,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.2653660660659809,
+          "rerank_score": 0.2404891,
+          "relevant": false,
+          "preview": "The Company's financial performance is subject to risks associated with changes in the value of the U.S. dollar relative to local currencies. The Comp"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 85,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.30913294212373166,
+          "rerank_score": 0.20535995,
+          "relevant": false,
+          "preview": "Apple Inc. | 2025 Form 10-K | 6 * * * Following any interruption to its business, the Company can require substantial recovery time, incur significant"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 96,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.29189948429078705,
+          "rerank_score": 0.2028219,
+          "relevant": false,
+          "preview": "Additionally, the Company's new products often utilize custom components available from only one source. When a component or product uses new technolo"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 122,
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.3293479440827157,
+          "rerank_score": 0.19534837,
+          "relevant": false,
+          "preview": "Various stakeholders, including governments, regulators, investors, employees, customers and others, have differing expectations about a wide range of"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 448,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.2787897259413138,
+          "rerank_score": 0.1857108,
+          "relevant": false,
+          "preview": "Following any interruption to its business, the Company can require substantial recovery time, experience significant expenditures to resume operation"
+        }
+      ]
+    },
+    {
+      "id": "u06",
+      "question": "What is the battery life of NVIDIA's smartphone?",
+      "ticker": "NVDA",
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.3824391269698133,
+      "rejected_by_threshold": false,
+      "abstained": true,
+      "source_count": 3,
+      "answer": "I don\u2019t know. The excerpts do not mention NVIDIA having a smartphone or provide any battery-life information.",
+      "claims": [
+        {
+          "claim": "I don\u2019t know.",
+          "cited_numbers": [],
+          "supported": true
+        },
+        {
+          "claim": "The excerpts do not mention NVIDIA having a smartphone or provide any battery-life information.",
+          "cited_numbers": [],
+          "supported": true
+        }
+      ],
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 339,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.26920732837679573,
+          "rerank_score": 0.20792148,
+          "relevant": false,
+          "preview": "We hold confidential, sensitive, personal and proprietary information, including information from partners and customers. Breaches of our security mea"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 590,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.34667106177727236,
+          "rerank_score": 0.192904,
+          "relevant": false,
+          "preview": "On January 15, 2025, the USG published the \"AI Diffusion\" IFR in the Federal Register. After a 120-day delayed compliance period, the IFR will, unless"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 631,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "mdna",
+          "vector_similarity": 0.34669243309389186,
+          "rerank_score": 0.192904,
+          "relevant": false,
+          "preview": "On January 15, 2025, the USG published the \"AI Diffusion\" IFR in the Federal Register. After a 120-day delayed compliance period, the IFR will, unless"
+        },
+        {
+          "rank": 4,
+          "chunk_id": 372,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.27225026454899437,
+          "rerank_score": 0.1857108,
+          "relevant": false,
+          "preview": "25 * * * Table of Contents and financial results. Export controls targeting GPUs and semiconductors associated with AI have subjected and may in the f"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 409,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "mdna",
+          "vector_similarity": 0.3824391269698133,
+          "rerank_score": 0.18335953,
+          "relevant": false,
+          "preview": "The following discussion and analysis of our financial condition and results of operations should be read in conjunction with \"Item 1A. Risk Factors,\""
+        }
+      ]
+    },
+    {
+      "id": "u07",
+      "question": "What is a good recipe for banana bread?",
+      "ticker": null,
+      "answerable": false,
+      "rank": null,
+      "best_similarity": 0.0951253275526317,
+      "rejected_by_threshold": true,
+      "abstained": true,
+      "source_count": 0,
+      "answer": "I don't know. The available filings do not contain information relevant to this question.",
+      "claims": null,
+      "error": null,
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": 364,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": 0.0951253275526317,
+          "rerank_score": 0.35362908,
+          "relevant": false,
+          "preview": "24 * * * Table of Contents"
+        },
+        {
+          "rank": 2,
+          "chunk_id": 550,
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "vector_similarity": 0.08073412472625141,
+          "rerank_score": 0.34298956,
+          "relevant": false,
+          "preview": "20 * * * Table of Contents"
+        },
+        {
+          "rank": 3,
+          "chunk_id": 327,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": -0.013887228734814627,
+          "rerank_score": 0.15900835,
+          "relevant": false,
+          "preview": "Undiscovered vulnerabilities in our products or services could result in loss of data or intangible property, or expose our customers to unscrupulous "
+        },
+        {
+          "rank": 4,
+          "chunk_id": 355,
+          "ticker": "NVDA",
+          "fiscal_year": 2026,
+          "section": "risk_factors",
+          "vector_similarity": -0.03992821713725436,
+          "rerank_score": 0.14686865,
+          "relevant": false,
+          "preview": "made on a purchase order basis, our customers can generally cancel, change, or delay product purchase commitments with little notice to us and without"
+        },
+        {
+          "rank": 5,
+          "chunk_id": 452,
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "vector_similarity": 0.059151262803679994,
+          "rerank_score": 0.13188717,
+          "relevant": false,
+          "preview": "Due to the highly volatile and competitive nature of the markets and industries in which the Company competes, the Company must continually introduce "
+        }
+      ]
+    }
+  ]
+}

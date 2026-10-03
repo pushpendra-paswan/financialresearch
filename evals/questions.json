@@ -1,0 +1,444 @@
+[
+  {
+    "id": "a01",
+    "question": "What were Apple's total net sales in fiscal 2025?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "mdna", "phrases": ["416,161"]}]
+  },
+  {
+    "id": "a02",
+    "question": "Why did Apple's sales in Greater China go down in 2025?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {"ticker": "AAPL", "section": "mdna", "phrases": ["Greater China net sales decreased during 2025"]}
+    ]
+  },
+  {
+    "id": "a03",
+    "question": "How large was the one-time tax charge tied to the State Aid Decision in Apple's fiscal 2024?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {"ticker": "AAPL", "section": "mdna", "phrases": ["one-time income tax charge of $10.2"]}
+    ]
+  },
+  {
+    "id": "a04",
+    "question": "How much money did Apple hand back to shareholders through buybacks and dividends in fiscal 2025?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "mdna", "phrases": ["repurchased $89.3 billion"]}]
+  },
+  {
+    "id": "a05",
+    "question": "How big was the share repurchase program Apple announced in May 2024?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "mdna", "phrases": ["up to $110 billion"]}]
+  },
+  {
+    "id": "a06",
+    "question": "Which new products did Apple announce in the fourth quarter of fiscal 2025?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "mdna", "phrases": ["AirPods Pro 3"]}]
+  },
+  {
+    "id": "a07",
+    "question": "How did Apple's Services gross margin percentage change in 2025, and why?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "mdna",
+        "phrases": ["Services gross margin percentage increased during 2025"]
+      }
+    ]
+  },
+  {
+    "id": "a08",
+    "question": "Where are the factories that assemble Apple's products, and why is that a risk?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["outsourcing partners located primarily in China mainland, India"]
+      }
+    ]
+  },
+  {
+    "id": "a09",
+    "question": "What does Apple say about parts that come from only one supplier?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["obtains certain components from single or limited sources"]
+      }
+    ]
+  },
+  {
+    "id": "a10",
+    "question": "Could the iPhone maker be forced to change how its App Store charges developers in Europe?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "risk_factors", "phrases": ["Digital Markets Act"]}]
+  },
+  {
+    "id": "a11",
+    "question": "How does a weaker foreign currency against the dollar hurt Apple?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["weakening of foreign currencies relative to the U.S. dollar adversely affects"]
+      }
+    ]
+  },
+  {
+    "id": "a12",
+    "question": "What does Apple say about being sued over patents?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["significant number of patent claims"]
+      }
+    ]
+  },
+  {
+    "id": "a13",
+    "question": "What risk does Apple see from earthquakes and other natural disasters near its suppliers?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [{"ticker": "AAPL", "section": "risk_factors", "phrases": ["prone to earthquakes"]}]
+  },
+  {
+    "id": "a14",
+    "question": "How do the new US tariffs announced in 2025 threaten Apple?",
+    "ticker": "AAPL",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["new tariffs were announced on imports"]
+      },
+      {"ticker": "AAPL", "section": "mdna", "phrases": ["new U.S. Tariffs were announced"]}
+    ]
+  },
+  {
+    "id": "n01",
+    "question": "How much revenue did NVIDIA report for fiscal year 2026?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["Revenue for fiscal year 2026 was $215.9 billion"]
+      }
+    ]
+  },
+  {
+    "id": "n02",
+    "question": "What was the $4.5 billion charge NVIDIA took in fiscal 2026 and what caused it?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {"ticker": "NVDA", "section": "mdna", "phrases": ["$4.5 billion charge"]},
+      {"ticker": "NVDA", "section": "risk_factors", "phrases": ["$4.5 billion charge"]}
+    ]
+  },
+  {
+    "id": "n03",
+    "question": "How fast did NVIDIA's Data Center revenue grow in fiscal 2025?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["Data Center revenue for fiscal year 2025 was up 142%"]
+      }
+    ]
+  },
+  {
+    "id": "n04",
+    "question": "Why did NVIDIA's gross margin fall in fiscal 2026?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["Gross margins decreased to 71.1% in fiscal year 2026"]
+      }
+    ]
+  },
+  {
+    "id": "n05",
+    "question": "Did a couple of big buyers account for a large share of NVIDIA's sales in fiscal 2026?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["one direct customer represented 22% of total revenue"]
+      }
+    ]
+  },
+  {
+    "id": "n06",
+    "question": "How much stock did NVIDIA buy back in fiscal 2026?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [{"ticker": "NVDA", "section": "mdna", "phrases": ["repurchased 282 million shares"]}]
+  },
+  {
+    "id": "n07",
+    "question": "What did NVIDIA say about selling H200 chips into China?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["not generated any revenue under the H200 licensing program"]
+      }
+    ]
+  },
+  {
+    "id": "n08",
+    "question": "How does NVIDIA depend on TSMC and other chip manufacturers?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["We depend on foundries to manufacture our semiconductor wafers"]
+      }
+    ]
+  },
+  {
+    "id": "n09",
+    "question": "What was the AI Diffusion rule and how would it have limited NVIDIA's exports?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {"ticker": "NVDA", "section": "risk_factors", "phrases": ["AI Diffusion"]},
+      {"ticker": "NVDA", "section": "mdna", "phrases": ["AI Diffusion"]}
+    ]
+  },
+  {
+    "id": "n10",
+    "question": "Why could an earthquake in Asia disrupt NVIDIA's business?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["vulnerable to natural disasters such as earthquakes"]
+      }
+    ]
+  },
+  {
+    "id": "n11",
+    "question": "What does NVIDIA say about climate change affecting its business?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["Climate change may have a long-term impact on our business"]
+      }
+    ]
+  },
+  {
+    "id": "n12",
+    "question": "Could takeover protections stop a buyer from acquiring NVIDIA?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["anti-takeover provisions of the Delaware General Corporation Law"]
+      }
+    ]
+  },
+  {
+    "id": "n13",
+    "question": "What risks does NVIDIA see in buying or investing in other companies?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["risks related to acquisitions and strategic investments"]
+      }
+    ]
+  },
+  {
+    "id": "n14",
+    "question": "How might free, open AI models change demand for NVIDIA's products?",
+    "ticker": "NVDA",
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["Open-source AI is dependent on developer adoption"]
+      },
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["Open-source foundation models are rapidly growing in popularity"]
+      }
+    ]
+  },
+  {
+    "id": "c01",
+    "question": "How do Apple and NVIDIA each describe their dependence on manufacturing partners?",
+    "ticker": null,
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["outsourcing partners located primarily in China mainland, India"]
+      },
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["We depend on foundries to manufacture our semiconductor wafers"]
+      }
+    ]
+  },
+  {
+    "id": "c02",
+    "question": "Which companies warn that earthquakes could disrupt their suppliers?",
+    "ticker": null,
+    "answerable": true,
+    "expected": [
+      {"ticker": "AAPL", "section": "risk_factors", "phrases": ["prone to earthquakes"]},
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["vulnerable to natural disasters such as earthquakes"]
+      }
+    ]
+  },
+  {
+    "id": "c03",
+    "question": "How do Apple and NVIDIA each describe the effect of government trade restrictions on their business?",
+    "ticker": null,
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["Restrictions on international trade, such as tariffs"]
+      },
+      {"ticker": "NVDA", "section": "risk_factors", "phrases": ["licensing requirements"]},
+      {"ticker": "NVDA", "section": "mdna", "phrases": ["licensing requirements"]}
+    ]
+  },
+  {
+    "id": "c04",
+    "question": "How do Apple and NVIDIA each describe competition in their markets?",
+    "ticker": null,
+    "answerable": true,
+    "expected": [
+      {
+        "ticker": "AAPL",
+        "section": "risk_factors",
+        "phrases": ["highly competitive and subject to rapid technological change"]
+      },
+      {
+        "ticker": "NVDA",
+        "section": "risk_factors",
+        "phrases": ["Our target markets remain competitive"]
+      }
+    ]
+  },
+  {
+    "id": "c05",
+    "question": "How much cash and marketable securities did each company hold at the end of its latest fiscal year?",
+    "ticker": null,
+    "answerable": true,
+    "expected": [
+      {"ticker": "AAPL", "section": "mdna", "phrases": ["totaled $132.4 billion"]},
+      {
+        "ticker": "NVDA",
+        "section": "mdna",
+        "phrases": ["we had $62.6 billion in cash, cash equivalents, and marketable securities"]
+      }
+    ]
+  },
+  {
+    "id": "u01",
+    "question": "What was the total pay of NVIDIA's chief executive last year, including stock awards?",
+    "ticker": null,
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u02",
+    "question": "What will Apple's stock price be at the end of next year?",
+    "ticker": "AAPL",
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u03",
+    "question": "How much revenue did NVIDIA report for fiscal year 2022?",
+    "ticker": "NVDA",
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u04",
+    "question": "How many iPhone units did Apple sell in fiscal 2025?",
+    "ticker": "AAPL",
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u05",
+    "question": "What is the price and driving range of Apple's electric car?",
+    "ticker": "AAPL",
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u06",
+    "question": "What is the battery life of NVIDIA's smartphone?",
+    "ticker": "NVDA",
+    "answerable": false,
+    "expected": []
+  },
+  {
+    "id": "u07",
+    "question": "What is a good recipe for banana bread?",
+    "ticker": null,
+    "answerable": false,
+    "expected": []
+  }
+]

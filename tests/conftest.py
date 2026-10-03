@@ -165,6 +165,18 @@ def fake_chat_model(monkeypatch: pytest.MonkeyPatch) -> ScriptedChatModel:
     return model
 
 
+@pytest.fixture(autouse=True)
+def no_reranker(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No test may ever reach Cohere, and the developer's real COHERE_API_KEY (from .env) must not
+    # switch reranking on in unrelated tests: the key is emptied and get_reranker FAILS the test
+    # when it is called. Rerank tests install their own fake reranker (tests/test_rag_rerank.py)
+    def forbidden_reranker(top_n: int) -> None:
+        raise AssertionError("The reranker was called, but this test expects no rerank")
+
+    monkeypatch.setattr(settings, "COHERE_API_KEY", "")
+    monkeypatch.setattr(llm, "get_reranker", forbidden_reranker)
+
+
 @pytest.fixture
 def script_chat(monkeypatch: pytest.MonkeyPatch) -> Callable[..., ScriptedChatModel]:
     # script_chat("answer 1", "answer 2") installs a model that gives these texts to the first and

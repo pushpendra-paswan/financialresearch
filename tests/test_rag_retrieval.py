@@ -479,7 +479,9 @@ def test_metadata_has_exactly_the_documented_keys_and_values(
         "vector_similarity",
         "vector_rank",
         "text_rank",
+        "rerank_score",
     }
+    assert document.metadata["rerank_score"] is None
     assert document.metadata["chunk_id"] == target.id
     assert document.metadata["filing_id"] == target.filing_id
     assert document.metadata["company_id"] == target.company_id

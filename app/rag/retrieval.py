@@ -1,6 +1,8 @@
 import logging
 import re
 
+import httpx
+from cohere.core import ApiError
 from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
@@ -15,7 +17,8 @@ logger = logging.getLogger(__name__)
 # Hybrid search: a pgvector similarity search and a Postgres full-text search, merged with
 # reciprocal rank fusion (RRF). It is plain Python on purpose: LangChain's EnsembleRetriever lives
 # in langchain-classic (not allowed here), and a BaseRetriever subclass would be a custom Runnable.
-# Chunks are shared public data, so there is no org_id.
+# Since 2.5 the best fused chunks can then be reranked by Cohere (rerank=None means "use the
+# settings"). Chunks are shared public data, so there is no org_id.
 def retrieve(
     db: Session,
     question: str,
@@ -25,6 +28,7 @@ def retrieve(
     sections: list[str] | None = None,
     top_k: int | None = None,
     filing_ids: list[int] | None = None,
+    rerank: bool | None = None,
 ) -> list[Document]:
     # 1. Validate the input. An unknown ticker is not an error, it simply matches nothing
     question = question.strip()
@@ -45,6 +49,10 @@ def retrieve(
     if tickers:
         tickers = [ticker.strip().upper() for ticker in tickers]
     candidates_k = settings.RETRIEVAL_CANDIDATES_K
+    if rerank is None:
+        rerank = settings.RERANK_ENABLED and bool(settings.COHERE_API_KEY)
+    # With reranking, more fused chunks are kept: Cohere picks the final top_k among them
+    keep_count = max(top_k, settings.RERANK_CANDIDATES_K) if rerank else top_k
 
     # 2. Embed the question once; both the vector search and the distances below use it
     query_embedding = llm.get_embeddings().embed_query(question)
@@ -85,7 +93,7 @@ def retrieve(
         tickers_by_id[chunk.id] = ticker
         text_ranks[chunk.id] = rank
     # Highest score first; equal scores are ordered by chunk id so the result is deterministic
-    top_ids = sorted(scores, key=lambda chunk_id: (-scores[chunk_id], chunk_id))[:top_k]
+    top_ids = sorted(scores, key=lambda chunk_id: (-scores[chunk_id], chunk_id))[:keep_count]
 
     # 6. Chunks that only the full-text search found have no distance yet. The relevance
     # threshold in 2.4 uses vector_similarity, so every returned chunk needs one
@@ -111,14 +119,35 @@ def retrieve(
                     "vector_similarity": 1 - distances[chunk_id],
                     "vector_rank": vector_ranks.get(chunk_id),
                     "text_rank": text_ranks.get(chunk_id),
+                    "rerank_score": None,
                 },
             )
         )
 
+    # 8. Rerank: Cohere reads the question and each chunk together and returns the best top_k in
+    # its own order. It fails open: when Cohere is down, slow or refuses the key, the fused order
+    # is used, so chat keeps working (the same reasoning as the Redis fail-open). Only the class
+    # name is logged, never the message. The rerank score is NOT used for "I don't know": it has
+    # another scale and changes between model versions, so the threshold stays on vector_similarity
+    reranked = False
+    if rerank and documents:
+        try:
+            ranked_documents = llm.get_reranker(top_n=top_k).compress_documents(documents, question)
+        except (ApiError, httpx.HTTPError) as exc:
+            logger.warning("rerank failed, using the fused order: %s", type(exc).__name__)
+            documents = documents[:top_k]
+        else:
+            documents = []
+            for document in ranked_documents:
+                document.metadata["rerank_score"] = document.metadata.pop("relevance_score")
+                documents.append(document)
+            reranked = True
+
     logger.info(
-        "retrieved %d chunks (%d vector candidates, %d full-text candidates)",
+        "retrieved %d chunks (%d vector candidates, %d full-text candidates, reranked=%s)",
         len(documents),
         len(vector_hits),
         len(text_hits),
+        reranked,
     )
     return documents
