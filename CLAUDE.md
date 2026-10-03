@@ -14,6 +14,8 @@ A multi-tenant web application for financial research on US-listed companies. It
 
 Each phase builds on the previous one. Never change a working earlier phase without a clear reason, and note any such change in `PROJECT_CONTEXT.md`.
 
+**Phase 2 and 3 scope**: RAG and the agent work only on AAPL and NVDA (`RAG_TICKERS`) and only on filings filed in the last 2 years (`RAG_LOOKBACK_YEARS`), to keep embedding and LLM costs low. Phase 1 data and ingestion for all 34 companies are unchanged.
+
 This is a learning and portfolio project. The developer must be able to read and explain every line, so clarity beats cleverness everywhere.
 
 ---
@@ -29,8 +31,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - Pydantic v2 + pydantic-settings
 - JWT auth (PyJWT) + bcrypt password hashing
 - httpx for external HTTP calls
-- BeautifulSoup + lxml for filing HTML parsing
-- LangChain 1.x for Phase 2 RAG: `langchain-core`, `langchain-text-splitters`, and the provider integration packages for the chosen chat model and embeddings. Section 6 defines how LangChain must be used.
+- LangChain 1.x for Phase 2 RAG: `langchain-core`, `langchain-text-splitters`, `langchain-community` (only `TextLoader` and `Html2TextTransformer`, with `html2text`, to load and convert filing HTML; the package is sunset and archived, so it is pinned and used for nothing else; it also installs `langchain-classic`, which is never imported), and the provider integration packages for the chosen chat model and embeddings. Section 6 defines how LangChain must be used.
 - pgvector Python package for the vector column in SQLAlchemy models
 - LangGraph for the agent (Phase 3)
 - yfinance for daily prices (the first `PriceProvider` implementation; an unofficial Yahoo Finance wrapper, fine for a personal learning project, not for commercial use)
@@ -133,7 +134,8 @@ fin-copilot/
 │   ├── repositories/      # Database queries only, one file per domain
 │   ├── services/          # Business logic, one file per domain
 │   ├── routes/            # FastAPI routers, one file per domain
-│   ├── clients/           # External services: SEC, price provider, LLM, embeddings
+│   ├── clients/           # External services: SEC, price provider
+│   ├── rag/               # Phase 2 only: the RAG pipeline, one module per step (parsing, chunking, retrieval, chat, llm)
 │   ├── workers/           # Celery app, tasks and beat schedule
 │   └── agent/             # Phase 3 only: agent tools and LangGraph graph
 ├── scripts/               # One-off commands: seed companies, backfill prices
@@ -153,17 +155,19 @@ Domains (use these names consistently across layers): `auth`, `organizations`, `
 - **Routes**: receive the request, call one service function, return a response schema. No database queries and no business logic in routes.
 - **Services**: business logic and orchestration. Call repositories and clients. Own the transaction (`db.commit()`). Raise custom exceptions from `app/exceptions.py`, never `HTTPException`. `main.py` maps custom exceptions to HTTP responses.
 - **Repositories**: SQLAlchemy queries only. No business rules, no commits, no external calls.
-- **Clients**: all calls to external systems (SEC, price provider, LLM, embeddings). Nothing else talks to the network.
+- **Clients**: all calls to external systems (SEC, price provider). Nothing else talks to the network, except the LangChain chat model and embeddings objects that `app/rag/llm.py` creates.
 - **Workers**: Celery tasks are thin. They open a DB session, call a service function, and log the result.
 
-RAG logic lives in services and repositories like everything else:
-- `services/filings.py`: filing HTML parsing and section extraction (2.1)
-- `services/chunks.py` + `repositories/chunks.py`: splitting, embedding, storing chunks, and the vector and full-text SQL queries (2.2, 2.3)
-- `services/retrieval.py`: hybrid search, merging and reranking (2.3, 2.5)
-- `services/chat.py` + `repositories/chat.py`: the Q&A flow, citations and chat history (2.4)
-- `clients/llm.py`: creates the LangChain chat model and embeddings objects from config; services import them from here
+RAG pipeline logic lives in `app/rag/`, one module per step:
+- `parsing.py` (2.1): load filing HTML, convert to text, extract the 10-K sections
+- `chunking.py` (2.2): splitting, embedding and storing chunks
+- `retrieval.py` (2.3, 2.5): hybrid search, merging and reranking
+- `chat.py` (2.4): the Q&A flow, citations and chat history
+- `llm.py`: creates the LangChain chat model and embeddings objects from config (added when first needed)
 
-Only the agent gets its own folder, because its tools and graph are a distinct layer.
+These modules play the service role: they own commits and raise custom exceptions. Models stay in `app/models/` (Alembic), SQL stays in `app/repositories/` (including `repositories/chunks.py` and `repositories/chat.py`), and HTTP routes stay in `app/routes/`.
+
+The agent (Phase 3) gets its own folder, `app/agent/`, because its tools and graph are a distinct layer.
 
 ---
 
@@ -234,10 +238,11 @@ Tables are created only in the milestone that needs them.
 - Show a "not investment advice" notice in the UI wherever AI answers appear.
 
 ### LangChain (Phase 2)
-LangChain provides the RAG building blocks, but the flow stays plain and visible inside our own service functions. A reader should see every step (rewrite question → retrieve → build prompt → call model → save citations) in order in the service code.
+Prefer LangChain components (loaders, document transformers, text splitters, embeddings, chat models, prompts) over custom code; write plain Python only where no component fits, and say so in the plan. The flow itself stays plain and visible inside our own functions in `app/rag/`: a reader should see every step (rewrite question → retrieve → build prompt → call model → save citations) in order in the code.
 
 Use LangChain for:
 - `Document` objects as the unit passed between parsing, chunking and retrieval.
+- `TextLoader` and `Html2TextTransformer` (from `langchain-community`) to load a stored filing and convert its HTML to text. The only custom step in parsing is the regex that cuts out the 10-K items, because no LangChain component knows them.
 - `RecursiveCharacterTextSplitter` for chunking, applied inside each section (never across section boundaries).
 - The embeddings interface (`embed_documents`, `embed_query`), so changing the embedding provider is a config change.
 - The standard chat model interface, `ChatPromptTemplate` for prompts, and simple LCEL pipes (`prompt | model`) called with `.invoke()` or `.stream()`.
@@ -252,7 +257,7 @@ Do not use:
 
 Also:
 - Check import paths against the installed LangChain version and avoid deprecated imports.
-- Prompts are module-level constants in the service file that uses them (e.g. `QA_PROMPT` in `services/chat.py`).
+- Prompts are module-level constants in the `app/rag/` module that uses them (e.g. `QA_PROMPT` in `app/rag/chat.py`).
 - Chunk size, chunk overlap, top-k values and the relevance threshold come from `app/config.py`.
 
 ---
@@ -290,13 +295,13 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: tests pass and the browser checklist passes.
 
 ### Phase 2: RAG
-- **2.1 Filing parsing**: clean filing HTML from raw storage with BeautifulSoup and extract key 10-K sections (Risk Factors, MD&A first). Output one LangChain `Document` per section with metadata (company_id, ticker, filing_id, form_type, fiscal_year, section).
-  Done when: clean section Documents are produced for 5 different companies (tests use saved fixture filings).
+- **2.1 Filing parsing** (`app/rag/parsing.py`): load a stored 10-K from raw storage with LangChain `TextLoader`, convert the HTML to text with `Html2TextTransformer`, and cut out Item 1A Risk Factors and Item 7 MD&A with a regex step. Output one LangChain `Document` per section found with metadata (company_id, ticker, filing_id, form_type, fiscal_year, section). 10-K only; scope is `RAG_TICKERS` and `RAG_LOOKBACK_YEARS`.
+  Done when: both sections are found in every in-scope 10-K of AAPL and NVDA (4 filings on 2026-10-04) and tests with saved fixture filings pass.
 - **2.2 Chunking and embeddings**: document_chunks table with a pgvector column and a Postgres full-text search column; split each section Document with `RecursiveCharacterTextSplitter`; embed in batches through the LangChain embeddings interface; Celery task triggered after filing ingestion; idempotent (skip filings already chunked), plus a re-embed command for when the embedding model or chunk settings change. Record the embedding model and vector dimension in `PROJECT_CONTEXT.md`.
-  Done when: every ingested 10-K has embedded chunks and running the task twice creates no duplicates.
-- **2.3 Retrieval**: in `repositories/chunks.py`, a pgvector similarity query and a Postgres full-text query, both with metadata filters (ticker, year range, section). In `services/retrieval.py`: embed the query, run both searches, merge with reciprocal rank fusion, and return LangChain `Document`s with chunk id and score in metadata.
+  Done when: every in-scope 10-K has embedded chunks and running the task twice creates no duplicates.
+- **2.3 Retrieval**: in `repositories/chunks.py`, a pgvector similarity query and a Postgres full-text query, both with metadata filters (ticker, year range, section). In `app/rag/retrieval.py`: embed the query, run both searches, merge with reciprocal rank fusion, and return LangChain `Document`s with chunk id and score in metadata.
   Done when: tests with fixture chunks return the expected chunk for known queries, and a manual check on real data returns sensible sections for 5 sample questions.
-- **2.4 Chat Q&A with citations**: chat_sessions, chat_messages and citations tables. The flow in `services/chat.py`, in this order:
+- **2.4 Chat Q&A with citations**: chat_sessions, chat_messages and citations tables. The flow in `app/rag/chat.py`, in this order:
   1. For a follow-up question, rewrite it into a standalone question using recent chat history (`prompt | model`).
   2. Retrieve chunks.
   3. If no chunk passes the relevance threshold, return a fixed "I don't know" answer without calling the LLM.

@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # Every price run fetches this many years of daily bars (365 days per year)
     PRICES_LOOKBACK_YEARS: int = 5
 
+    # Phase 2 and 3 (RAG and the agent) work only on these tickers (comma-separated) and only on
+    # filings filed within this many years (365 days per year). This keeps embedding and LLM
+    # costs small; Phase 1 ingestion still covers every company
+    RAG_TICKERS: str = "AAPL,NVDA"
+    RAG_LOOKBACK_YEARS: int = 2
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10

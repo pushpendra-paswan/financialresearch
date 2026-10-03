@@ -4,6 +4,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.companies import Company
 from app.models.filings import Filing
 
 
@@ -67,3 +68,31 @@ def list_by_company(
     )
     filings = list(db.execute(page_statement).scalars().all())
     return filings, total
+
+
+def get_by_id_with_ticker(db: Session, filing_id: int) -> tuple[Filing, str] | None:
+    statement = (
+        select(Filing, Company.ticker)
+        .join(Company, Company.id == Filing.company_id)
+        .where(Filing.id == filing_id)
+    )
+    row = db.execute(statement).one_or_none()
+    if row is None:
+        return None
+    return row[0], row[1]
+
+
+def list_in_scope_10k(db: Session, tickers: list[str], filed_since: date) -> list[int]:
+    # Downloaded 10-Ks of the given tickers filed on or after the date, ordered by ticker
+    statement = (
+        select(Filing.id)
+        .join(Company, Company.id == Filing.company_id)
+        .where(
+            Filing.form_type == "10-K",
+            Filing.raw_path.is_not(None),
+            Company.ticker.in_(tickers),
+            Filing.filed_on >= filed_since,
+        )
+        .order_by(Company.ticker, Filing.filed_on, Filing.id)
+    )
+    return list(db.execute(statement).scalars().all())
