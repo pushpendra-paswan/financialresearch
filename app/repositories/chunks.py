@@ -27,6 +27,7 @@ def apply_filters(
     year_from: int | None,
     year_to: int | None,
     sections: list[str] | None,
+    filing_ids: list[int] | None = None,
 ) -> Select:
     # Shared by both searches so they always filter the same way. Each filter is applied only
     # when given. The statement must already join companies. A chunk with no fiscal_year never
@@ -39,6 +40,8 @@ def apply_filters(
         statement = statement.where(DocumentChunk.fiscal_year <= year_to)
     if sections:
         statement = statement.where(DocumentChunk.section.in_(sections))
+    if filing_ids:
+        statement = statement.where(DocumentChunk.filing_id.in_(filing_ids))
     return statement
 
 
@@ -50,6 +53,7 @@ def vector_search(
     year_from: int | None,
     year_to: int | None,
     sections: list[str] | None,
+    filing_ids: list[int] | None = None,
 ) -> list[tuple[DocumentChunk, str, float]]:
     # Exact nearest-neighbour scan by cosine distance (the <=> operator): there is no vector index.
     # Ties are broken by id so the order is deterministic
@@ -60,7 +64,7 @@ def vector_search(
         .order_by(distance, DocumentChunk.id)
         .limit(limit)
     )
-    statement = apply_filters(statement, tickers, year_from, year_to, sections)
+    statement = apply_filters(statement, tickers, year_from, year_to, sections, filing_ids)
     return [(chunk, ticker, dist) for chunk, ticker, dist in db.execute(statement).all()]
 
 
@@ -72,6 +76,7 @@ def fulltext_search(
     year_from: int | None,
     year_to: int | None,
     sections: list[str] | None,
+    filing_ids: list[int] | None = None,
 ) -> list[tuple[DocumentChunk, str, float]]:
     # query_text is parsed by websearch_to_tsquery with the same "english" configuration that
     # built search_vector. It never raises on odd input. Only chunks that match are returned.
@@ -85,7 +90,7 @@ def fulltext_search(
         .order_by(rank.desc(), DocumentChunk.id)
         .limit(limit)
     )
-    statement = apply_filters(statement, tickers, year_from, year_to, sections)
+    statement = apply_filters(statement, tickers, year_from, year_to, sections, filing_ids)
     return [
         (chunk, ticker, rank_value) for chunk, ticker, rank_value in db.execute(statement).all()
     ]

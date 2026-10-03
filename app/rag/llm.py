@@ -1,10 +1,11 @@
 from langchain_core.embeddings import Embeddings
-from langchain_openai import OpenAIEmbeddings
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.config import settings
 
 
-# The one place that creates LangChain model objects. The chat model is added here in 2.4.
+# The one place that creates LangChain model objects.
 def get_embeddings() -> Embeddings:
     if not settings.OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY is not set")
@@ -19,4 +20,19 @@ def get_embeddings() -> Embeddings:
         api_key=settings.OPENAI_API_KEY,
         chunk_size=settings.EMBEDDING_BATCH_SIZE,
         check_embedding_ctx_length=False,
+    )
+
+
+def get_chat_model() -> BaseChatModel:
+    if not settings.OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY is not set")
+
+    # No temperature: gpt-5.x models accept only the default (LangChain drops any other value).
+    # reasoning_effort is left unset: the default call used no reasoning tokens. A model call
+    # that hangs ends after LLM_TIMEOUT_SECONDS; max_retries covers transient OpenAI errors
+    return ChatOpenAI(
+        model=settings.CHAT_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        timeout=settings.LLM_TIMEOUT_SECONDS,
+        max_retries=2,
     )

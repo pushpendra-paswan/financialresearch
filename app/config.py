@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     RETRIEVAL_TOP_K: int = 5
     RRF_K: int = 60
 
+    # Chat (2.4). The chat model is OpenAI through LangChain's ChatOpenAI; the key is OPENAI_API_KEY
+    # above (empty means chat is disabled). A chunk is used only when its vector_similarity is at
+    # least RELEVANCE_THRESHOLD (real data: 0.095 for an off-topic question, 0.47 to 0.75 for real
+    # ones). CHAT_HISTORY_MESSAGES is how many recent messages the question rewrite sees
+    CHAT_MODEL: str = "gpt-5.4-mini"
+    RELEVANCE_THRESHOLD: float = 0.30
+    CHAT_HISTORY_MESSAGES: int = 6
+    LLM_TIMEOUT_SECONDS: int = 60
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10

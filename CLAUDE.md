@@ -142,8 +142,8 @@ fin-copilot/
 ├── evals/                 # Phase 2/3 evaluation questions, scripts and results
 ├── frontend/              # Plain HTML, CSS, JS (ES modules), served at /app
 │   ├── style.css          # The one stylesheet
-│   ├── common.js          # Shared code: api(), token access, nav, pager, el(), showMessage()
-│   └── <page>.html + <page>.js   # One pair per page: index, companies, company, watchlists, alerts, notifications, team
+│   ├── common.js          # Shared code: api(), apiStream(), token access, nav, pager, el(), showMessage()
+│   └── <page>.html + <page>.js   # One pair per page: index, companies, company, watchlists, alerts, notifications, team, chat
 ├── data/raw/              # Raw downloaded SEC/price files (git-ignored)
 └── tests/
 ```
@@ -186,7 +186,7 @@ Private organization data (every table has `org_id`):
 - `watchlists` (org_id, created_by, name; name unique per organization, case-insensitive), `watchlist_items` (primary key is watchlist_id + company_id; deleting a watchlist cascades to its items)
 - `alerts` (org_id, user_id = owner, company_id, alert_type price_above/price_below/daily_change_pct, threshold, active, watch_from = first day the alert may fire), `notifications` (org_id, user_id, alert_id with ON DELETE CASCADE, company_id, trade_date, trigger_value, message, is_read, created_at; unique on alert_id + trade_date)
 - `audit_logs` (org_id, user_id, action, entity_id)
-- `chat_sessions`, `chat_messages`, `citations` (message_id, chunk_id, score)
+- `chat_sessions` (org_id, user_id = owner, title nullable = the first question cut to 100 characters, created_at, updated_at), `chat_messages` (session_id with ON DELETE CASCADE, role user/assistant, content, rewritten_question nullable, ticker nullable = the filter used, model nullable, created_at; no `org_id`: read only through the owner's session, like `watchlist_items`), `citations` (message_id with ON DELETE CASCADE, number = the [n] in the answer, chunk_id NULLABLE with ON DELETE SET NULL, score = the vector similarity, and a SNAPSHOT of what was cited: filing_id, ticker, fiscal_year, section, content; unique on message_id + number). `--reembed` replaces chunk rows, so a citation must not depend on its chunk row: after a re-embed `chunk_id` is null and the snapshot still shows the exact passage. Chats are PERSONAL, like alerts
 - `agent_runs` (message_id, status, step_count), `tool_calls` (run_id, tool_name, input, output, approval_status)
 - `reports` (org_id, user_id, agent_run_id nullable, title, content), `report_companies`
 
@@ -202,6 +202,7 @@ Tables are created only in the milestone that needs them.
 - Every org-owned feature has a test proving organization A cannot see organization B's data.
 - Roles: viewers are read-only on organization data; admin and analyst can create and change it (the `require_editor` dependency); managing users is admin-only.
 - Alerts and notifications are personal: besides org_id, every query also filters by the owning user_id, and another user's alert or notification returns 404 even inside the same organization. Any role, including viewer, can manage their own alerts. The evaluation job's list_active is the only org-less alert query.
+- Chat sessions are personal like alerts: every session query filters by org_id AND user_id, and a colleague's or another organization's session returns the same 404 "Chat session not found". Every role, including viewer, can chat (a chat changes no shared organization data). Messages and citations are read only through a session loaded this way.
 - Agent tools enforce `org_id` the same way.
 
 ### External data
@@ -224,7 +225,7 @@ Tables are created only in the milestone that needs them.
 ### Frontend rules
 - (a) Text is put on the page only through `textContent` (and `createElement`, `append`, `setAttribute` for non-style attributes). `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval` and `new Function` are forbidden; `tests/test_frontend.py` enforces it.
 - (b) Every HTML page has the Content-Security-Policy meta tag as the first element in `<head>`, and no inline script, no `style` attributes and no inline event handler attributes.
-- (c) `fetch` and the login token (`localStorage`) are used only in `frontend/common.js`.
+- (c) `fetch` and the login token (`localStorage`) are used only in `frontend/common.js`, which has exactly nine exports; the ninth, `apiStream`, is the only `fetch` besides `api()` (it reads the NDJSON chat stream).
 - (d) Hiding controls by role is UX only; the server enforces permissions and its error messages are shown as they are.
 - (e) Never construct a `Date` from a date-only string (like `2024-06-07`); show such values as received.
 - (f) No polling, no timers, no auto-refresh.
@@ -232,7 +233,7 @@ Tables are created only in the milestone that needs them.
 
 ### AI behaviour (Phases 2 and 3)
 - Answers use only retrieved filing text. Every factual claim has a citation stored in `citations`.
-- When the retrieved evidence is weak, the answer says it does not know.
+- When the retrieved evidence is weak, the answer says it does not know. "Weak" is decided with `vector_similarity` (never the RRF score) against `RELEVANCE_THRESHOLD` (0.30); chunks below it are neither numbered nor sent to the model.
 - Read-only agent tools run automatically. Write tools (`create_alert`, `save_report`) set `approval_status = pending` and pause the run until the user approves.
 - Every agent step is stored in `tool_calls`. Runs have a maximum step count and a timeout.
 - Show a "not investment advice" notice in the UI wherever AI answers appear.
@@ -303,13 +304,14 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: every in-scope 10-K has embedded chunks and running the task twice creates no duplicates.
 - **2.3 Retrieval**: in `repositories/chunks.py`, a pgvector cosine-distance query and a Postgres full-text query (`ts_rank_cd`), both with metadata filters (tickers, year range, sections). The full-text query is an OR query: the question's `\w+` words joined with `or` and passed to `websearch_to_tsquery('english', ...)`, because an AND query on a natural sentence matches nothing. In `app/rag/retrieval.py`, `retrieve(db, question, tickers, year_from, year_to, sections, top_k)`: validate, embed the query once, run both searches (`RETRIEVAL_CANDIDATES_K` each), merge with reciprocal rank fusion (`score = sum(1 / (RRF_K + rank))`, ties by chunk id), keep `RETRIEVAL_TOP_K`, and return LangChain `Document`s whose metadata holds `chunk_id, filing_id, company_id, ticker, fiscal_year, section, chunk_index, score, vector_similarity, vector_rank, text_rank`. `vector_similarity` (1 minus cosine distance, filled for every returned chunk) is the signal 2.4 compares with its relevance threshold; the RRF `score` only orders chunks. `python -m scripts.try_retrieval "question"` (or `--samples`) is the manual check.
   Done when: tests with fixture chunks return the expected chunk for known queries, and a manual check on real data returns sensible sections for 5 sample questions.
-- **2.4 Chat Q&A with citations**: chat_sessions, chat_messages and citations tables. The flow in `app/rag/chat.py`, in this order:
-  1. For a follow-up question, rewrite it into a standalone question using recent chat history (`prompt | model`).
-  2. Retrieve chunks.
-  3. If no chunk passes the relevance threshold, return a fixed "I don't know" answer without calling the LLM.
-  4. Number the chunks in the prompt and instruct the model to answer only from them and cite as [1], [2].
-  5. Stream the answer to the client with `.stream()`.
-  6. After streaming, parse the citation markers, then save the message and citation rows (ignore markers that do not match a provided chunk).
+- **2.4 Chat Q&A with citations**: chat_sessions, chat_messages and citations tables (section 5). The flow in `app/rag/chat.py`, in this order:
+  1. Load the session with org_id AND user_id (404 otherwise) and the model (503 when `OPENAI_API_KEY` is empty); both BEFORE the response starts.
+  2. For a follow-up question (the session has history), rewrite it into a standalone question using the last `CHAT_HISTORY_MESSAGES` messages (`prompt | model`). No history, no rewrite and no LLM call.
+  3. Retrieve chunks with `retrieve(..., filing_ids=list_scope_filing_ids(db))`, so chat only sees the exact RAG scope (an empty scope answers "I don't know" without searching: an empty `filing_ids` list means "no filter").
+  4. Keep the chunks with `vector_similarity >= RELEVANCE_THRESHOLD`. If none passes, the answer is the fixed `NO_ANSWER` text without calling the answer LLM.
+  5. Number the passing chunks in the prompt and instruct the model to answer only from them and to cite each sentence as [1], [2].
+  6. Stream the answer with `.stream()` as NDJSON (`application/x-ndjson`, one JSON object per line): `{"type": "sources", "sources": [{number, chunk_id, ticker, fiscal_year, section, score, content}]}` first (empty for "I don't know"), then `{"type": "token", "text"}` pieces, then `{"type": "done", "message_id", "cited_numbers"}`. A failure after the stream started sends `{"type": "error", "detail"}` instead (generic text; the class name only is logged) and nothing is saved.
+  7. After streaming, parse the markers [n] and [1, 2], ignore numbers outside 1..n, and save in ONE transaction the user message, the assistant message and one citation row per distinct valid number (with the snapshot of the chunk).
 
   Plus a chat UI with streaming and clickable citations that open the source passage.
   Done when: an answer shows citations that open the exact source passage, a follow-up question works, and an unanswerable question gets the "I don't know" response.

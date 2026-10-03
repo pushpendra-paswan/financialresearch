@@ -24,6 +24,7 @@ def retrieve(
     year_to: int | None = None,
     sections: list[str] | None = None,
     top_k: int | None = None,
+    filing_ids: list[int] | None = None,
 ) -> list[Document]:
     # 1. Validate the input. An unknown ticker is not an error, it simply matches nothing
     question = question.strip()
@@ -39,7 +40,8 @@ def retrieve(
         top_k = settings.RETRIEVAL_TOP_K
     if top_k < 1:
         raise ValueError("top_k must be at least 1")
-    # An empty list means "no filter", the same as None (the repository checks for that)
+    # An empty list means "no filter", the same as None (the repository checks for that). That
+    # includes filing_ids: a caller that restricts to a scope must handle an empty scope itself
     if tickers:
         tickers = [ticker.strip().upper() for ticker in tickers]
     candidates_k = settings.RETRIEVAL_CANDIDATES_K
@@ -49,7 +51,7 @@ def retrieve(
 
     # 3. Vector search: the nearest chunks by cosine distance, nearest first
     vector_hits = chunk_repository.vector_search(
-        db, query_embedding, candidates_k, tickers, year_from, year_to, sections
+        db, query_embedding, candidates_k, tickers, year_from, year_to, sections, filing_ids
     )
 
     # 4. Full-text search. A question is a natural sentence, so an AND query (plainto_tsquery)
@@ -60,7 +62,7 @@ def retrieve(
     text_hits = []
     if words:
         text_hits = chunk_repository.fulltext_search(
-            db, " or ".join(words), candidates_k, tickers, year_from, year_to, sections
+            db, " or ".join(words), candidates_k, tickers, year_from, year_to, sections, filing_ids
         )
 
     # 5. Reciprocal rank fusion: score = sum of 1 / (RRF_K + rank) over the lists a chunk is in

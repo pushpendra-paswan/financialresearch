@@ -404,3 +404,72 @@ th.number {
 [hidden] {
   display: none !important;
 }
+
+/* Research chat */
+.notice {
+  margin: 8px 0 16px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+  background: #eaf1fb;
+}
+
+.grow {
+  flex: 1 1 240px;
+}
+
+.grow input {
+  width: 100%;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bubble {
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bubble.user {
+  background: #eaf1fb;
+  align-self: flex-end;
+}
+
+.bubble.assistant {
+  background: var(--surface);
+}
+
+.bubble-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+button.cite {
+  padding: 0 4px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.passage {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fafbfc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

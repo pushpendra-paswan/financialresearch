@@ -14,11 +14,13 @@ from app.exceptions import (
     ForbiddenError,
     NotFoundError,
     RateLimitError,
+    ServiceUnavailableError,
     UnauthorizedError,
 )
 from app.routes import (
     alerts,
     auth,
+    chat,
     companies,
     filings,
     financials,
@@ -45,6 +47,7 @@ limited = [Depends(limit_user)]
 app.include_router(health.router)
 app.include_router(alerts.router, dependencies=limited)
 app.include_router(auth.router)
+app.include_router(chat.router, dependencies=limited)
 app.include_router(companies.router, dependencies=limited)
 app.include_router(filings.router, dependencies=limited)
 app.include_router(financials.router, dependencies=limited)
@@ -97,6 +100,11 @@ def handle_rate_limit(request: Request, exc: RateLimitError) -> JSONResponse:
         content={"detail": exc.message},
         headers={"Retry-After": str(exc.retry_after)},
     )
+
+
+@app.exception_handler(ServiceUnavailableError)
+def handle_service_unavailable(request: Request, exc: ServiceUnavailableError) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": exc.message})
 
 
 # Every error body is {"detail": "<string>"}, so 422 turns FastAPI's list of errors into one

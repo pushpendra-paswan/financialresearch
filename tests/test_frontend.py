@@ -5,9 +5,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-PAGES = ["index", "companies", "company", "watchlists", "alerts", "notifications", "team"]
+PAGES = [
+    "index",
+    "companies",
+    "company",
+    "watchlists",
+    "alerts",
+    "notifications",
+    "team",
+    "chat",
+]
 COMMON_EXPORTS = {
     "api",
+    "apiStream",
     "saveToken",
     "hasToken",
     "requireLogin",
@@ -111,13 +121,36 @@ def test_network_and_storage_only_in_common_js(path: Path) -> None:
         assert not re.search(pattern, text), f"{path.name} contains {pattern}; use common.js"
 
 
-def test_common_js_exports_exactly_the_eight_names() -> None:
+def test_common_js_exports_exactly_the_nine_names() -> None:
     text = (FRONTEND_DIR / "common.js").read_text()
     export_lines = re.findall(r"^export\b.*$", text, flags=re.MULTILINE)
     names = re.findall(r"^export\s+(?:async\s+)?function\s+(\w+)", text, flags=re.MULTILINE)
     assert len(export_lines) == len(names), f"common.js has a non-function export: {export_lines}"
     assert set(names) == COMMON_EXPORTS, f"common.js exports {sorted(names)}"
     assert len(names) == len(set(names))
+
+
+def test_api_stream_is_the_only_other_fetch_with_a_120_second_timeout() -> None:
+    text = (FRONTEND_DIR / "common.js").read_text()
+    assert len(re.findall(r"\bfetch\(", text)) == 2  # api() and apiStream()
+    stream_function = text[text.index("export async function apiStream") :]
+    stream_function = stream_function[: stream_function.index("\nexport ")]
+    assert "AbortSignal.timeout(120000)" in stream_function
+    assert "getReader()" in stream_function
+    assert "TextDecoder" in stream_function
+    assert "Authorization" in stream_function  # the same bearer token as api()
+    assert "status === 401" in stream_function  # the same session-expired handling as api()
+
+
+def test_chat_page_has_the_advice_notice_in_the_page_and_uses_api_stream() -> None:
+    html = (FRONTEND_DIR / "chat.html").read_text()
+    main_part = html[html.index("<main>") : html.index("</main>")]
+    assert "Not investment advice" in main_part  # visible with the answers, not only the footer
+    script = (FRONTEND_DIR / "chat.js").read_text()
+    assert "apiStream(" in script
+    assert 'href="chat.html"' not in script  # links are built with setAttribute
+    nav = (FRONTEND_DIR / "common.js").read_text()
+    assert '["chat.html", "Research chat"]' in nav
 
 
 @pytest.mark.parametrize("path", js_files, ids=lambda path: path.name)

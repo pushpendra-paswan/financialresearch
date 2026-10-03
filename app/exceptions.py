@@ -27,3 +27,9 @@ class RateLimitError(Exception):
         super().__init__(message)
         self.message = message
         self.retry_after = retry_after
+
+
+class ServiceUnavailableError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message

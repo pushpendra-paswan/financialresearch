@@ -72,6 +72,86 @@ export async function api(method, path, body) {
   return data;
 }
 
+// Sends a POST and reads the answer as a stream of NDJSON lines (one JSON object per line),
+// calling onEvent(object) for each line as soon as it arrives. Same token, 401 and error
+// handling as api(). Problems found BEFORE the stream starts (validation, 404, 503, 429) come as
+// normal JSON errors and are thrown here; a failure after it started arrives as an event.
+// The 120 seconds cover the whole stream, reading included. Resolves when the stream ends.
+export async function apiStream(path, body, onEvent) {
+  const token = readToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = "Bearer " + token;
+  }
+  const options = {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120000),
+  };
+
+  let response;
+  try {
+    response = await fetch(path, options);
+  } catch (error) {
+    if (error.name === "TimeoutError") {
+      throw new Error("The request timed out");
+    }
+    throw new Error("Cannot reach the server");
+  }
+
+  if (response.status === 401 && token) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = "index.html?expired=1";
+    return new Promise(function () {}); // never resolves, so the page code stops here
+  }
+
+  if (!response.ok) {
+    let data = null;
+    try {
+      data = JSON.parse(await response.text());
+    } catch (error) {
+      data = null; // not JSON: reported below
+    }
+    if (data && typeof data.detail === "string") {
+      throw new Error(data.detail);
+    }
+    throw new Error("Unexpected response (status " + response.status + ")");
+  }
+
+  // Read the body piece by piece. A network piece can end in the middle of a line, so the text
+  // after the last newline is kept in buffer until the rest arrives.
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    let piece;
+    try {
+      piece = await reader.read();
+    } catch (error) {
+      if (error.name === "TimeoutError") {
+        throw new Error("The request timed out");
+      }
+      throw new Error("The connection was interrupted");
+    }
+    if (piece.done) {
+      break;
+    }
+    buffer += decoder.decode(piece.value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (line.trim() !== "") {
+        onEvent(JSON.parse(line));
+      }
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer.trim() !== "") {
+    onEvent(JSON.parse(buffer));
+  }
+}
+
 // Protected pages call this first. Returns the current user.
 export async function requireLogin() {
   if (!hasToken()) {
@@ -120,6 +200,7 @@ export async function renderNav(user, activePage) {
   const list = el("ul", "nav-links");
   const links = [
     ["companies.html", "Companies"],
+    ["chat.html", "Research chat"],
     ["watchlists.html", "Watchlists"],
     ["alerts.html", "Alerts"],
     ["notifications.html", "Notifications"],

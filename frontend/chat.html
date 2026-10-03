@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research chat - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Research chat</h1>
+    <div id="message" aria-live="polite"></div>
+    <p class="notice" id="advice-notice">Not investment advice. Answers are generated from the text of AAPL and NVDA 10-K filings and can be wrong: check the cited passages.</p>
+
+    <div class="two-columns">
+      <section class="card" aria-labelledby="list-heading">
+        <h2 id="list-heading">Your chats</h2>
+        <div id="list-message" aria-live="polite"></div>
+        <p><button id="new-chat-button" type="button">New chat</button></p>
+        <ul id="session-list" class="plain-list"></ul>
+        <p class="muted">Chats are private: only you can see them.</p>
+      </section>
+
+      <section class="card" aria-labelledby="chat-heading">
+        <h2 id="chat-heading">Conversation</h2>
+        <div id="chat-message" aria-live="polite"></div>
+        <p id="chat-empty">Select a chat on the left or start a new one.</p>
+        <div id="chat-body" hidden>
+          <div class="toolbar">
+            <span id="chat-title" class="muted"></span>
+            <button id="delete-button" type="button" class="danger">Delete this chat</button>
+          </div>
+          <div id="conversation" class="conversation"></div>
+          <p id="stream-status" class="muted" aria-live="polite"></p>
+          <form id="ask-form" method="post">
+            <div class="toolbar">
+              <div class="field">
+                <label for="ask-ticker">Company</label>
+                <select id="ask-ticker">
+                  <option value="">All</option>
+                  <option value="AAPL">AAPL</option>
+                  <option value="NVDA">NVDA</option>
+                </select>
+              </div>
+              <div class="field grow">
+                <label for="ask-question">Your question</label>
+                <input id="ask-question" type="text" maxlength="1000" required autocomplete="off">
+              </div>
+              <button id="ask-button" type="submit">Ask</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <section id="passage-panel" class="card" aria-labelledby="passage-heading" hidden>
+      <div class="toolbar">
+        <h2 id="passage-heading">Source passage</h2>
+        <button id="passage-close" type="button" class="secondary">Close</button>
+      </div>
+      <p id="passage-meta" class="muted"></p>
+      <p id="passage-note" class="muted" hidden></p>
+      <div id="passage-text" class="passage"></div>
+    </section>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="chat.js"></script>
+</body>
+</html>

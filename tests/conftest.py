@@ -1,5 +1,6 @@
 import os
 from collections.abc import Callable, Generator
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -7,6 +8,8 @@ import httpx
 import openai
 import pytest
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from langchain_core.messages import AIMessage
 from pydantic import Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -56,8 +59,12 @@ from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
+from app.models.chunks import DocumentChunk
 from app.rag import llm
 from app.redis_client import redis_client
+from app.repositories import chunks as chunk_repository
+from app.repositories import companies as company_repository
+from app.repositories import filings as filing_repository
 from app.services import companies as company_service
 
 
@@ -116,6 +123,61 @@ def fake_embeddings(monkeypatch: pytest.MonkeyPatch) -> SpyEmbeddings:
     fake = SpyEmbeddings(size=1536)
     monkeypatch.setattr(llm, "get_embeddings", lambda: fake)
     return fake
+
+
+class ScriptedChatModel(GenericFakeChatModel):
+    # A fake chat model that answers with the scripted texts, one per call, in order (an extra
+    # call raises StopIteration). It records the messages of every call in `received`, can fail
+    # in the middle of a stream like an OpenAI error, and with forbidden=True it fails the test
+    # as soon as it is called
+    received: list[list] = Field(default_factory=list)
+    forbidden: bool = False
+    fail_after_pieces: int | None = None
+    fail_on_call: bool = False
+
+    def _generate(self, messages, *args, **kwargs):
+        if self.forbidden:
+            raise AssertionError("The chat model was called, but this test expects no call")
+        if self.fail_on_call:
+            request = httpx.Request("POST", "https://example.invalid/chat/completions")
+            raise openai.APIConnectionError(request=request)
+        self.received.append(messages)
+        return super()._generate(messages, *args, **kwargs)
+
+    def _stream(self, *args, **kwargs):
+        for index, chunk in enumerate(super()._stream(*args, **kwargs)):
+            if self.fail_after_pieces is not None and index >= self.fail_after_pieces:
+                request = httpx.Request("POST", "https://example.invalid/chat/completions")
+                raise openai.APIConnectionError(request=request)
+            yield chunk
+
+    def prompt_text(self, call_index: int) -> str:
+        # All messages of one call as one string, for assertions on what the model was given
+        return "\n".join(str(message.content) for message in self.received[call_index])
+
+
+@pytest.fixture(autouse=True)
+def fake_chat_model(monkeypatch: pytest.MonkeyPatch) -> ScriptedChatModel:
+    # No test may ever reach OpenAI: by default the chat model FAILS the test when it is called.
+    # Tests that expect answers install scripted ones with script_chat
+    model = ScriptedChatModel(messages=iter([]), forbidden=True)
+    monkeypatch.setattr(llm, "get_chat_model", lambda: model)
+    return model
+
+
+@pytest.fixture
+def script_chat(monkeypatch: pytest.MonkeyPatch) -> Callable[..., ScriptedChatModel]:
+    # script_chat("answer 1", "answer 2") installs a model that gives these texts to the first and
+    # second call. fail_after_pieces=N makes a stream fail after N pieces
+    def install(*texts: str, fail_after_pieces: int | None = None) -> ScriptedChatModel:
+        model = ScriptedChatModel(
+            messages=iter([AIMessage(content=text) for text in texts]),
+            fail_after_pieces=fail_after_pieces,
+        )
+        monkeypatch.setattr(llm, "get_chat_model", lambda: model)
+        return model
+
+    return install
 
 
 @pytest.fixture
@@ -223,3 +285,94 @@ def people(
         me = client.get("/auth/me", headers=headers).json()
         result[name] = {"headers": headers, "org_id": me["org_id"], "user_id": me["id"]}
     return result
+
+
+# Chunks for the chat tests: 3 chunks in the RAG scope (10-Ks filed within RAG_LOOKBACK_YEARS,
+# downloaded) and 1 chunk of an OLD 10-K that is outside it. The text is hand-written; the fake
+# embeddings give the same vector for the same text, so a question equal to a chunk's content has
+# similarity 1 with it, and about 0 with the others (below RELEVANCE_THRESHOLD)
+CHAT_CHUNK_DATA = {
+    "nvda_export": (
+        "NVDA",
+        "risk_factors",
+        "Export controls restrict sales of data center products to China.",
+    ),
+    "nvda_mdna": (
+        "NVDA",
+        "mdna",
+        "Data Center revenue grew on demand for accelerated computing.",
+    ),
+    "aapl_risk": (
+        "AAPL",
+        "risk_factors",
+        "Apple depends on outsourcing partners in Asia for the manufacture of its products.",
+    ),
+    "aapl_old": (
+        "AAPL",
+        "risk_factors",
+        "Legacy product transitions in an old filing created inventory risk.",
+    ),
+}
+
+
+@pytest.fixture
+def chat_chunks(db: Session) -> dict[str, DocumentChunk]:
+    today = date.today()
+    companies = {}
+    for ticker, cik in (("AAPL", "0000320193"), ("NVDA", "0001045810")):
+        # The seeded fixture may have created the company already
+        company = company_repository.get_by_ticker(db, ticker)
+        companies[ticker] = company or company_repository.create(
+            db, ticker, cik, f"{ticker} Inc.", None
+        )
+
+    # (ticker, filed_on) -> a downloaded 10-K. The AAPL 10-K filed 900 days ago is out of scope
+    filings = {}
+    for ticker, days_ago, fiscal_year in (
+        ("AAPL", 60, today.year - 1),
+        ("NVDA", 30, today.year - 1),
+    ):
+        filing = filing_repository.create(
+            db,
+            companies[ticker].id,
+            f"{ticker}-in-scope",
+            "10-K",
+            today - timedelta(days=days_ago),
+            report_date=today - timedelta(days=days_ago + 30),
+            fiscal_year=fiscal_year,
+            primary_document="document.htm",
+        )
+        filing.raw_path = "document.htm"
+        filings[(ticker, "in")] = filing
+    old = filing_repository.create(
+        db,
+        companies["AAPL"].id,
+        "AAPL-old",
+        "10-K",
+        today - timedelta(days=900),
+        report_date=today - timedelta(days=930),
+        fiscal_year=today.year - 3,
+        primary_document="document.htm",
+    )
+    old.raw_path = "document.htm"
+    filings[("AAPL", "old")] = old
+    db.flush()
+
+    vectors = llm.get_embeddings().embed_documents([data[2] for data in CHAT_CHUNK_DATA.values()])
+    rows = {}
+    for (name, (ticker, section, content)), vector in zip(
+        CHAT_CHUNK_DATA.items(), vectors, strict=True
+    ):
+        filing = filings[(ticker, "old" if name == "aapl_old" else "in")]
+        rows[name] = DocumentChunk(
+            filing_id=filing.id,
+            company_id=companies[ticker].id,
+            section=section,
+            fiscal_year=filing.fiscal_year,
+            chunk_index=0,
+            content=content,
+            embedding=vector,
+            embedding_model="fake",
+        )
+    chunk_repository.create_many(db, list(rows.values()))
+    return rows

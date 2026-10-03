@@ -411,6 +411,52 @@ def test_filters_apply_to_the_text_search_too(
     assert all(d.metadata["text_rank"] is None for d in documents)
 
 
+def test_filing_ids_filter_limits_both_searches(
+    db: Session, chunks: dict[str, DocumentChunk]
+) -> None:
+    # Two filings: the NVDA one of last year (2 risk chunks + 1 MD&A chunk), and the AAPL one of
+    # the year before. "tariff" is a text-only match inside the first filing
+    nvda_filing_id = chunks["nvda_tariff"].filing_id
+    aapl_old_filing_id = chunks["aapl_risk_old"].filing_id
+
+    only_nvda = retrieval.retrieve(db, "tariff", filing_ids=[nvda_filing_id], top_k=8)
+    assert {d.metadata["filing_id"] for d in only_nvda} == {nvda_filing_id}
+    assert len(only_nvda) == 3
+    assert [d.metadata["chunk_id"] for d in only_nvda if d.metadata["text_rank"] == 1] == [
+        chunks["nvda_tariff"].id
+    ]
+
+    # The text hit lives in a filing that is not allowed: it must not come back
+    only_aapl_old = retrieval.retrieve(db, "tariff", filing_ids=[aapl_old_filing_id], top_k=8)
+    assert {d.metadata["filing_id"] for d in only_aapl_old} == {aapl_old_filing_id}
+    assert all(d.metadata["text_rank"] is None for d in only_aapl_old)
+
+    both = retrieval.retrieve(
+        db, "tariff", filing_ids=[nvda_filing_id, aapl_old_filing_id], top_k=8
+    )
+    assert {d.metadata["filing_id"] for d in both} == {nvda_filing_id, aapl_old_filing_id}
+
+
+def test_filing_ids_combines_with_the_other_filters(
+    db: Session, chunks: dict[str, DocumentChunk]
+) -> None:
+    nvda_filing_id = chunks["nvda_tariff"].filing_id
+
+    documents = retrieval.retrieve(
+        db, "tariff", tickers=["NVDA"], sections=["mdna"], filing_ids=[nvda_filing_id], top_k=8
+    )
+
+    assert [d.metadata["chunk_id"] for d in documents] == [chunks["nvda_mdna"].id]
+
+
+def test_unknown_filing_id_matches_nothing_and_empty_list_means_no_filter(
+    db: Session, chunks: dict[str, DocumentChunk]
+) -> None:
+    assert retrieval.retrieve(db, "tariff", filing_ids=[999999], top_k=8) == []
+    # An empty list is "no filter", like tickers=[] (chat handles an empty scope itself)
+    assert len(retrieval.retrieve(db, "tariff", filing_ids=[], top_k=8)) == 8
+
+
 # ---------- output ----------
 
 
