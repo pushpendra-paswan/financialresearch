@@ -32,6 +32,7 @@ RUN_KEYS = {
     "message_id",
     "answer_message_id",
     "tool_calls",
+    "pending_approval",  # 3.3: null unless the run waits for an approval
 }
 TOOL_CALL_KEYS = {
     "step",
@@ -110,6 +111,7 @@ def test_a_viewer_runs_the_agent_and_reads_the_trace_of_their_own_run(
     assert response.status_code == 200
     body = response.json()
     assert set(body) == RUN_KEYS
+    assert body["pending_approval"] is None
     assert (body["status"], body["step_count"], body["error"]) == ("completed", 2, None)
     assert body["finished_at"] is not None
     assert body["answer_message_id"] == events[-1]["message_id"]

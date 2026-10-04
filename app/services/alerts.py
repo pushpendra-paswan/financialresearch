@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.exceptions import ConflictError, NotFoundError
 from app.models.alerts import AlertType
+from app.models.companies import Company
 from app.models.ingestion import IngestionRun
 from app.repositories import alerts as alert_repository
 from app.repositories import audit as audit_repository
@@ -25,7 +26,9 @@ MAX_ALERTS_PER_USER = 50
 EVALUATION_WINDOW_DAYS = 30
 
 
-def create_alert(db: Session, org_id: int, user_id: int, data: AlertCreate) -> AlertResponse:
+def check_can_create(db: Session, org_id: int, user_id: int, data: AlertCreate) -> Company:
+    # The checks of create_alert, without writing. Also used by the agent's create_alert tool, so
+    # the user is never asked to approve an alert that could not be created anyway
     company = company_repository.get_by_ticker(db, data.ticker.upper())
     if company is None:
         raise NotFoundError("Company not found")
@@ -39,6 +42,11 @@ def create_alert(db: Session, org_id: int, user_id: int, data: AlertCreate) -> A
     )
     if duplicate:
         raise ConflictError("You already have this alert")
+    return company
+
+
+def create_alert(db: Session, org_id: int, user_id: int, data: AlertCreate) -> AlertResponse:
+    company = check_can_create(db, org_id, user_id, data)
 
     # The containers run in UTC, so date.today() is the UTC date. Bars before this date can
     # never fire the new alert

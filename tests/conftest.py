@@ -1,3 +1,4 @@
+import itertools
 import json
 import os
 import threading
@@ -64,6 +65,7 @@ from fastapi.testclient import TestClient
 from alembic import command
 from app.agent import run as agent_run
 from app.agent import tools as agent_tools
+from app.agent import write_tools as agent_write_tools
 from app.clients import sec
 from app.config import settings
 from app.database import engine
@@ -216,13 +218,27 @@ class ScriptedChatModel(GenericFakeChatModel):
         return "\n".join(str(message.content) for message in self.received[call_index])
 
 
+# Scripted tool call ids are unique within a test, like the ids of a real model: since 3.3 the
+# database has a unique constraint on (run_id, tool_call_id). The counter restarts for every test
+call_ids = itertools.count()
+
+
+@pytest.fixture(autouse=True)
+def restart_call_ids() -> None:
+    # pytest may load this file under another module name than the tests import it by
+    # ("tests.conftest"), so the counter is reset on the module the tests actually use
+    import tests.conftest as helpers
+
+    helpers.call_ids = itertools.count()
+
+
 def tool_calls_message(*calls: tuple[str, dict]) -> AIMessage:
     # A scripted model answer that asks for tools: tool_calls_message(("get_price_history", {...}))
     return AIMessage(
         content="",
         tool_calls=[
-            {"name": name, "args": args, "id": f"call_{index}_{name}", "type": "tool_call"}
-            for index, (name, args) in enumerate(calls)
+            {"name": name, "args": args, "id": f"call_{next(call_ids)}_{name}", "type": "tool_call"}
+            for name, args in calls
         ],
     )
 
@@ -567,11 +583,16 @@ def agent_environment(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
             yield db
 
     monkeypatch.setattr(agent_tools, "SessionLocal", shared_session)
+    monkeypatch.setattr(agent_write_tools, "SessionLocal", shared_session)
     monkeypatch.setattr(agent_run, "SessionLocal", shared_session)
+
+    # ONE saver for the whole test (since 3.3): a run that pauses and is resumed later opens the
+    # checkpointer twice and must find its own checkpoint again
+    saver = InMemorySaver()
 
     @contextmanager
     def in_memory_checkpointer():
-        yield InMemorySaver()
+        yield saver
 
     monkeypatch.setattr(agent_run, "open_checkpointer", in_memory_checkpointer)
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-test-not-real")

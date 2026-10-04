@@ -9,6 +9,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
     false,
     func,
 )
@@ -25,14 +26,17 @@ class AgentRunStatus(StrEnum):
     step_limit = "step_limit"
     timeout = "timeout"
     cancelled = "cancelled"
+    # 3.3: a write tool paused the run until the user decides; expired = nobody decided in time
+    waiting_approval = "waiting_approval"
+    expired = "expired"
 
 
 class ApprovalStatus(StrEnum):
-    # 3.2 only writes not_required; pending, approved and rejected are used from 3.3
     not_required = "not_required"
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    expired = "expired"
 
 
 class AgentRun(Base):
@@ -40,7 +44,8 @@ class AgentRun(Base):
     __tablename__ = "agent_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('running', 'completed', 'failed', 'step_limit', 'timeout', 'cancelled')",
+            "status IN ('running', 'completed', 'failed', 'step_limit', 'timeout', 'cancelled', "
+            "'waiting_approval', 'expired')",
             name="ck_agent_runs_status",
         ),
         Index("ix_agent_runs_org_id_user_id", "org_id", "user_id"),
@@ -71,10 +76,12 @@ class ToolCall(Base):
     __tablename__ = "tool_calls"
     __table_args__ = (
         CheckConstraint(
-            "approval_status IN ('not_required', 'pending', 'approved', 'rejected')",
+            "approval_status IN ('not_required', 'pending', 'approved', 'rejected', 'expired')",
             name="ck_tool_calls_approval_status",
         ),
         Index("ix_tool_calls_run_id_id", "run_id", "id"),
+        # A pending row is later UPDATED with the result, never duplicated
+        UniqueConstraint("run_id", "tool_call_id", name="uq_tool_calls_run_id_tool_call_id"),
     )
 
     id: Mapped[int] = mapped_column(Identity(), primary_key=True)

@@ -1,7 +1,9 @@
 // Research chat: the session list on the left, the selected session (?id=) on the right.
 // Answers stream in as plain text; when the stream ends the conversation is loaded again from the
 // server, and every [n] in a stored answer becomes a button that opens the cited passage. Answers
-// of the research agent also get a "Steps" button that shows the stored tool calls of the run.
+// of the research agent also get a "Steps" button that shows the stored tool calls of the run, and
+// an answer whose run waits for the user's decision (a write action such as creating an alert)
+// shows an approval card with Approve and Reject.
 import { api, apiStream, el, renderNav, requireLogin, showMessage } from "./common.js";
 
 const message = document.getElementById("message");
@@ -138,6 +140,40 @@ async function loadConversation() {
       bubble.append(stored.content.slice(position));
       conversation.append(bubble);
 
+      // The approval card of a run that waits for the user's decision. The text is the summary the
+      // server generated from the arguments; it is never rebuilt here. The buttons carry the ids
+      // the decision must name, and one click handler below sends it
+      if (run && run.status === "waiting_approval" && run.pending_approval) {
+        const pending = run.pending_approval;
+        const card = el("div", "approval", null);
+        card.append(
+          el("strong", null, pending.expired ? "Expired" : "Approval needed"),
+          el("p", null, pending.summary),
+          el("pre", null, JSON.stringify(pending.args)),
+          el("p", "muted", (pending.expired ? "Expired at " : "Expires at ") + pending.expires_at)
+        );
+        if (pending.expired) {
+          card.append(
+            el("p", "muted", "This action was not approved in time and can no longer be approved. Ask again if you still want it.")
+          );
+        } else {
+          const actions = el("div", "approval-actions", null);
+          for (const [label, decision, className] of [
+            ["Approve", "approve", null],
+            ["Reject", "reject", "secondary"],
+          ]) {
+            const decisionButton = el("button", className, label);
+            decisionButton.type = "button";
+            decisionButton.setAttribute("data-decision", decision);
+            decisionButton.setAttribute("data-run-id", String(run.id));
+            decisionButton.setAttribute("data-tool-call-id", String(pending.tool_call_id));
+            actions.append(decisionButton);
+          }
+          card.append(actions, el("p", "approval-live muted", ""));
+        }
+        conversation.append(card);
+      }
+
       // The trace of the agent run: one entry per tool call, the output folded away
       if (run) {
         const stepsButton = el("button", "secondary steps-toggle", "Steps (" + run.tool_calls.length + ")");
@@ -152,9 +188,11 @@ async function loadConversation() {
         for (const call of run.tool_calls) {
           const entry = el("li", null, null);
           const outcome = call.is_error ? "error" : "ok";
+          // pending, approved, rejected or expired; calls that needed no approval show nothing
+          const approval = call.approval_status === "not_required" ? "" : " \u00b7 approval " + call.approval_status;
           entry.append(
             el("strong", null, "Step " + call.step + ": " + call.tool_name),
-            " \u00b7 " + outcome + " \u00b7 " + call.duration_ms + " ms",
+            " \u00b7 " + outcome + approval + " \u00b7 " + call.duration_ms + " ms",
             el("pre", null, JSON.stringify(call.input))
           );
           const output = el("details", null, null);
@@ -226,6 +264,9 @@ askForm.addEventListener("submit", async function (event) {
         } else if (streamEvent.type === "step_result") {
           streamStatus.textContent =
             "Step " + streamEvent.step + " finished: " + streamEvent.tool + (streamEvent.ok ? "" : " (error)");
+        } else if (streamEvent.type === "approval_required") {
+          // The card itself comes from the reload after the stream
+          streamStatus.textContent = "Waiting for your approval: " + streamEvent.tool;
         } else if (streamEvent.type === "sources") {
           streamStatus.textContent =
             streamEvent.sources.length === 0
@@ -263,6 +304,76 @@ askForm.addEventListener("submit", async function (event) {
   // Show what is really stored (this also turns the [n] markers into buttons)
   await Promise.all([loadConversation(), loadSessions()]);
   askQuestion.focus();
+});
+
+// Approve or reject a paused run: the click on a card button sends the decision, which names the
+// pending call, and streams the rest of the run like a question. A 409 (already decided, expired,
+// another run active) or a 503 is shown as the server wrote it. Afterwards the conversation is
+// loaded again, so the placeholder becomes the final answer
+conversation.addEventListener("click", async function (event) {
+  const button = event.target.closest("button[data-decision]");
+  if (!button) {
+    return;
+  }
+  const card = button.closest(".approval");
+  for (const decisionButton of card.querySelectorAll("button[data-decision]")) {
+    decisionButton.disabled = true;
+  }
+  askQuestion.disabled = true;
+  askTicker.disabled = true;
+  askMode.disabled = true;
+  askButton.disabled = true;
+  showMessage(message, null);
+  streamStatus.textContent = "Sending your decision...";
+  const liveText = card.querySelector(".approval-live");
+
+  let text = "";
+  let finished = false;
+  let failure = null;
+  try {
+    await apiStream(
+      "/agent/runs/" + encodeURIComponent(button.getAttribute("data-run-id")) + "/decision",
+      {
+        tool_call_id: Number(button.getAttribute("data-tool-call-id")),
+        decision: button.getAttribute("data-decision"),
+      },
+      function (streamEvent) {
+        // Event types this page does not know are ignored
+        if (streamEvent.type === "decision") {
+          streamStatus.textContent = "Decision recorded: " + streamEvent.decision;
+        } else if (streamEvent.type === "step") {
+          streamStatus.textContent = "Step " + streamEvent.step + ": " + streamEvent.tool;
+        } else if (streamEvent.type === "step_result") {
+          streamStatus.textContent =
+            "Step " + streamEvent.step + " finished: " + streamEvent.tool + (streamEvent.ok ? "" : " (error)");
+        } else if (streamEvent.type === "approval_required") {
+          streamStatus.textContent = "Waiting for your approval: " + streamEvent.tool;
+        } else if (streamEvent.type === "token") {
+          text += streamEvent.text;
+          liveText.textContent = text;
+        } else if (streamEvent.type === "done") {
+          finished = true;
+        } else if (streamEvent.type === "error") {
+          failure = streamEvent.detail;
+        }
+      }
+    );
+    if (!finished && failure === null) {
+      failure = "The run was interrupted. Reload the page to see where it stands.";
+    }
+  } catch (error) {
+    failure = error.message;
+  }
+
+  streamStatus.textContent = "";
+  askQuestion.disabled = false;
+  askTicker.disabled = false;
+  askMode.disabled = false;
+  askButton.disabled = false;
+  if (failure !== null) {
+    showMessage(message, failure, "error");
+  }
+  await Promise.all([loadConversation(), loadSessions()]);
 });
 
 document.getElementById("new-chat-button").addEventListener("click", async function () {

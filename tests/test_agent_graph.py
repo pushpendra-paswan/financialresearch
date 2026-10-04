@@ -10,6 +10,7 @@ from langgraph.errors import GraphRecursionError
 from app.agent import graph as agent_graph
 from app.agent.graph import AGENT_PROMPT, build_graph
 from app.agent.tools import READ_ONLY_TOOLS
+from app.agent.write_tools import WRITE_TOOLS
 from tests.conftest import ScriptedChatModel, tool_calls_message
 
 PRICE_CALL = ("get_price_history", {"ticker": "NVDA", "days": 5})
@@ -78,7 +79,7 @@ def test_a_tool_call_runs_the_tool_and_the_model_answers(
     assert len(model.received) == 2
 
 
-def test_the_model_gets_the_five_tools_and_a_filled_system_prompt(
+def test_the_model_gets_the_six_tools_and_a_filled_system_prompt(
     script_chat: Callable[..., ScriptedChatModel],
 ) -> None:
     model = script_chat("Hello.")
@@ -86,7 +87,7 @@ def test_the_model_gets_the_five_tools_and_a_filled_system_prompt(
 
     graph.invoke({"messages": [HumanMessage("hi")]}, config_for(focus="The user focused on NVDA."))
 
-    assert sorted(model.bound_tools) == sorted(tool.name for tool in READ_ONLY_TOOLS)
+    assert sorted(model.bound_tools) == sorted(tool.name for tool in READ_ONLY_TOOLS + WRITE_TOOLS)
     system, human = model.received[0]
     assert isinstance(system, SystemMessage)
     assert f"Today's date is {date.today().isoformat()}." in system.content

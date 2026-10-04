@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     # history given to the agent reuses CHAT_HISTORY_MESSAGES
     AGENT_MAX_STEPS: int = 8
     AGENT_TIMEOUT_SECONDS: int = 120
+    # A write action waits this long for the user's decision, then it can no longer be approved
+    APPROVAL_TTL_MINUTES: int = 60
 
     # Reranking (2.5): Cohere through LangChain's CohereRerank. An empty COHERE_API_KEY means
     # reranking is off (never logged). After fusion the best RERANK_CANDIDATES_K chunks are sent to

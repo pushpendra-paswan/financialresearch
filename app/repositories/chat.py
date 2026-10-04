@@ -48,6 +48,15 @@ def touch_session(db: Session, chat_session: ChatSession) -> None:
     db.flush()
 
 
+def get_message(db: Session, session_id: int, message_id: int) -> ChatMessage | None:
+    # The session was loaded by the service through the scoped query (or is the session of a run
+    # that was loaded through get_run)
+    statement = select(ChatMessage).where(
+        ChatMessage.id == message_id, ChatMessage.session_id == session_id
+    )
+    return db.execute(statement).scalar_one_or_none()
+
+
 def list_recent_messages(db: Session, session_id: int, limit: int) -> list[ChatMessage]:
     # The last `limit` messages, returned oldest first
     statement = (
@@ -104,4 +113,11 @@ def create_message(
 
 def create_citations(db: Session, citations: list[Citation]) -> None:
     db.add_all(citations)
+    db.flush()
+
+
+def update_message(db: Session, message: ChatMessage, content: str, model: str | None) -> None:
+    # Only the agent uses this: the placeholder answer of a paused run becomes the real answer
+    message.content = content
+    message.model = model
     db.flush()

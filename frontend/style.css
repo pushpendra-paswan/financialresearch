@@ -489,6 +489,33 @@ th.number {
   overflow-y: auto;
 }
 
+.approval {
+  margin: -6px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #fffbea;
+}
+
+.approval p {
+  margin: 4px 0;
+}
+
+.approval pre {
+  margin: 4px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
 button.cite {
   padding: 0 4px;
   background: var(--surface);
