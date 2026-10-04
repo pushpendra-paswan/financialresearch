@@ -123,3 +123,14 @@ def get_distances(
     distance = DocumentChunk.embedding.cosine_distance(query_embedding)
     statement = select(DocumentChunk.id, distance).where(DocumentChunk.id.in_(chunk_ids))
     return {chunk_id: dist for chunk_id, dist in db.execute(statement).all()}
+
+
+def list_by_ids(db: Session, chunk_ids: list[int]) -> list[tuple[DocumentChunk, str]]:
+    # The chunks that still exist, as (chunk, ticker). The agent uses it to build the citation
+    # snapshot of the chunks its search tool returned
+    statement = (
+        select(DocumentChunk, Company.ticker)
+        .join(Company, Company.id == DocumentChunk.company_id)
+        .where(DocumentChunk.id.in_(chunk_ids))
+    )
+    return [(chunk, ticker) for chunk, ticker in db.execute(statement).all()]

@@ -18,6 +18,7 @@ from app.exceptions import (
     UnauthorizedError,
 )
 from app.routes import (
+    agent,
     alerts,
     auth,
     chat,
@@ -45,6 +46,7 @@ app = FastAPI(title=settings.APP_NAME)
 limited = [Depends(limit_user)]
 
 app.include_router(health.router)
+app.include_router(agent.router, dependencies=limited)
 app.include_router(alerts.router, dependencies=limited)
 app.include_router(auth.router)
 app.include_router(chat.router, dependencies=limited)

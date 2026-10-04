@@ -1,6 +1,7 @@
 // Research chat: the session list on the left, the selected session (?id=) on the right.
 // Answers stream in as plain text; when the stream ends the conversation is loaded again from the
-// server, and every [n] in a stored answer becomes a button that opens the cited passage.
+// server, and every [n] in a stored answer becomes a button that opens the cited passage. Answers
+// of the research agent also get a "Steps" button that shows the stored tool calls of the run.
 import { api, apiStream, el, renderNav, requireLogin, showMessage } from "./common.js";
 
 const message = document.getElementById("message");
@@ -14,6 +15,7 @@ const conversation = document.getElementById("conversation");
 const streamStatus = document.getElementById("stream-status");
 const askForm = document.getElementById("ask-form");
 const askTicker = document.getElementById("ask-ticker");
+const askMode = document.getElementById("ask-mode");
 const askQuestion = document.getElementById("ask-question");
 const askButton = document.getElementById("ask-button");
 const passagePanel = document.getElementById("passage-panel");
@@ -68,9 +70,28 @@ async function loadConversation() {
     if (session.messages.length === 0) {
       conversation.append(el("p", "muted", "Ask a question about the AAPL and NVDA 10-K filings."));
     }
+    // The research agent's answers have a run: its status is shown next to the answer, so the
+    // runs are loaded together with the conversation (one request per agent answer)
+    const runs = new Map();
+    for (const stored of session.messages) {
+      if (stored.run_id === null || stored.run_id === undefined) {
+        continue;
+      }
+      try {
+        runs.set(stored.run_id, await api("GET", "/agent/runs/" + encodeURIComponent(stored.run_id)));
+      } catch (error) {
+        // The answer is still shown, only without its steps
+      }
+    }
+
     for (const stored of session.messages) {
       const bubble = el("div", "bubble " + stored.role, null);
-      bubble.append(el("span", "bubble-label", stored.role === "user" ? "You" : "Answer"));
+      const label = el("span", "bubble-label", stored.role === "user" ? "You" : "Answer");
+      const run = runs.get(stored.run_id);
+      if (run && run.status !== "completed") {
+        label.append(" · run " + run.status);
+      }
+      bubble.append(label);
 
       if (stored.role === "user") {
         bubble.append(stored.content);
@@ -116,6 +137,41 @@ async function loadConversation() {
       }
       bubble.append(stored.content.slice(position));
       conversation.append(bubble);
+
+      // The trace of the agent run: one entry per tool call, the output folded away
+      if (run) {
+        const stepsButton = el("button", "secondary steps-toggle", "Steps (" + run.tool_calls.length + ")");
+        stepsButton.type = "button";
+        stepsButton.setAttribute("aria-expanded", "false");
+        const stepsPanel = el("div", "steps", null);
+        stepsPanel.hidden = true;
+        if (run.tool_calls.length === 0) {
+          stepsPanel.append(el("p", "muted", "The agent answered without calling a tool."));
+        }
+        const stepsList = el("ol", null, null);
+        for (const call of run.tool_calls) {
+          const entry = el("li", null, null);
+          const outcome = call.is_error ? "error" : "ok";
+          entry.append(
+            el("strong", null, "Step " + call.step + ": " + call.tool_name),
+            " \u00b7 " + outcome + " \u00b7 " + call.duration_ms + " ms",
+            el("pre", null, JSON.stringify(call.input))
+          );
+          const output = el("details", null, null);
+          output.append(
+            el("summary", null, "Output (" + call.output.length + " characters)"),
+            el("pre", "step-output", call.output)
+          );
+          entry.append(output);
+          stepsList.append(entry);
+        }
+        stepsPanel.append(stepsList);
+        stepsButton.addEventListener("click", function () {
+          stepsPanel.hidden = !stepsPanel.hidden;
+          stepsButton.setAttribute("aria-expanded", String(!stepsPanel.hidden));
+        });
+        conversation.append(stepsButton, stepsPanel);
+      }
     }
   } catch (error) {
     // Includes "Chat session not found" for a missing id or someone else's chat
@@ -135,6 +191,7 @@ askForm.addEventListener("submit", async function (event) {
   // The form stays disabled until the stream has ended
   askQuestion.disabled = true;
   askTicker.disabled = true;
+  askMode.disabled = true;
   askButton.disabled = true;
   showMessage(message, null);
   showMessage(chatMessage, null);
@@ -148,7 +205,7 @@ askForm.addEventListener("submit", async function (event) {
   answerBubble.append(answerLabel);
   const answerText = el("span", null, "");
   answerBubble.append(answerText);
-  streamStatus.textContent = "Searching the filings...";
+  streamStatus.textContent = askMode.value === "rag" ? "Searching the filings..." : "Thinking...";
 
   let text = "";
   let finished = false;
@@ -156,9 +213,20 @@ askForm.addEventListener("submit", async function (event) {
   try {
     await apiStream(
       "/chat/sessions/" + encodeURIComponent(selectedId) + "/messages",
-      { question: question, ticker: askTicker.value || null },
+      { question: question, ticker: askTicker.value || null, mode: askMode.value },
       function (streamEvent) {
-        if (streamEvent.type === "sources") {
+        // Event types this page does not know are ignored
+        if (streamEvent.type === "route") {
+          streamStatus.textContent = "Routing: " + streamEvent.route;
+        } else if (streamEvent.type === "step") {
+          const args = streamEvent.args || {};
+          const target = args.ticker || (Array.isArray(args.tickers) ? args.tickers.join(", ") : "");
+          streamStatus.textContent =
+            "Step " + streamEvent.step + ": " + streamEvent.tool + (target ? " (" + target + ")" : "");
+        } else if (streamEvent.type === "step_result") {
+          streamStatus.textContent =
+            "Step " + streamEvent.step + " finished: " + streamEvent.tool + (streamEvent.ok ? "" : " (error)");
+        } else if (streamEvent.type === "sources") {
           streamStatus.textContent =
             streamEvent.sources.length === 0
               ? "No relevant passages found."
@@ -183,11 +251,13 @@ askForm.addEventListener("submit", async function (event) {
   streamStatus.textContent = "";
   askQuestion.disabled = false;
   askTicker.disabled = false;
+  askMode.disabled = false;
   askButton.disabled = false;
   if (failure === null) {
     askQuestion.value = "";
   } else {
-    // Nothing was saved for this question: keep it in the box so it can be sent again
+    // The filings chat saves nothing when it fails (an agent run saves the question and its
+    // trace). Either way the question stays in the box so it can be sent again
     showMessage(message, failure, "error");
   }
   // Show what is really stored (this also turns the [n] markers into buttons)

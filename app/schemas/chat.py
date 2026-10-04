@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
@@ -37,6 +37,8 @@ class MessageResponse(BaseModel):
     created_at: datetime
     # Empty for user messages and for answers without citations
     citations: list[CitationResponse]
+    # The agent run that wrote this answer (3.2); null for user messages and RAG answers
+    run_id: int | None = None
 
 
 class SessionDetailResponse(SessionResponse):
@@ -49,6 +51,9 @@ class MessageCreate(BaseModel):
     ]
     # Optional filter; null means all of RAG_TICKERS
     ticker: str | None = None
+    # How the question is answered (3.2): "rag" is the 2.4 chat (the API default, so older clients
+    # are unchanged), "agent" always runs the research agent, "auto" lets a router choose
+    mode: Literal["rag", "agent", "auto"] = "rag"
 
     @field_validator("ticker")
     @classmethod

@@ -14,6 +14,7 @@ from app.models.chat import ChatSession, Citation
 from app.rag import llm
 from app.rag.parsing import list_scope_filing_ids
 from app.rag.retrieval import retrieve
+from app.repositories import agent as agent_repository
 from app.repositories import audit as audit_repository
 from app.repositories import chat as chat_repository
 from app.schemas.chat import CitationResponse, MessageResponse, SessionDetailResponse
@@ -267,6 +268,10 @@ def get_session_detail(
         raise NotFoundError("Chat session not found")
 
     rows = chat_repository.list_messages_with_citations(db, chat_session.id)
+    # Answers written by an agent run get the run id (the messages come from the loaded session)
+    run_ids = agent_repository.list_run_ids_by_answer_messages(
+        db, [message.id for message, _ in rows]
+    )
     messages = [
         MessageResponse(
             id=message.id,
@@ -274,6 +279,7 @@ def get_session_detail(
             content=message.content,
             created_at=message.created_at,
             citations=[CitationResponse.model_validate(citation) for citation in citations],
+            run_id=run_ids.get(message.id),
         )
         for message, citations in rows
     ]

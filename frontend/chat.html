@@ -12,7 +12,7 @@
   <main>
     <h1>Research chat</h1>
     <div id="message" aria-live="polite"></div>
-    <p class="notice" id="advice-notice">Not investment advice. Answers are generated from the text of AAPL and NVDA 10-K filings and can be wrong: check the cited passages.</p>
+    <p class="notice" id="advice-notice">Not investment advice. Answers are generated from the text of AAPL and NVDA 10-K filings and, for the research agent, from stored financial and price data. They can be wrong: check the cited passages and the steps.</p>
 
     <div class="two-columns">
       <section class="card" aria-labelledby="list-heading">
@@ -42,6 +42,14 @@
                   <option value="">All</option>
                   <option value="AAPL">AAPL</option>
                   <option value="NVDA">NVDA</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="ask-mode">Mode</label>
+                <select id="ask-mode">
+                  <option value="auto">Auto</option>
+                  <option value="rag">Filings only</option>
+                  <option value="agent">Research agent</option>
                 </select>
               </div>
               <div class="field grow">

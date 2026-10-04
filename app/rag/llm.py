@@ -22,6 +22,9 @@ def get_embeddings() -> Embeddings:
         api_key=settings.OPENAI_API_KEY,
         chunk_size=settings.EMBEDDING_BATCH_SIZE,
         check_embedding_ctx_length=False,
+        # Without it the OpenAI SDK waits 10 minutes: the agent's search_filings embeds queries
+        # inside a run that has its own time limit
+        timeout=settings.LLM_TIMEOUT_SECONDS,
     )
 
 

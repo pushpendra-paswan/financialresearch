@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     CHAT_HISTORY_MESSAGES: int = 6
     LLM_TIMEOUT_SECONDS: int = 60
 
+    # Agent (3.2): the maximum number of model calls and the maximum wall time of one run. The
+    # history given to the agent reuses CHAT_HISTORY_MESSAGES
+    AGENT_MAX_STEPS: int = 8
+    AGENT_TIMEOUT_SECONDS: int = 120
+
     # Reranking (2.5): Cohere through LangChain's CohereRerank. An empty COHERE_API_KEY means
     # reranking is off (never logged). After fusion the best RERANK_CANDIDATES_K chunks are sent to
     # Cohere, which returns the top k. The timeout is short on purpose: a slow Cohere must fall

@@ -2,7 +2,6 @@ import json
 import logging
 from contextlib import nullcontext
 from datetime import date, timedelta
-from decimal import Decimal
 
 import httpx
 import openai
@@ -41,11 +40,8 @@ from app.models.prices import PriceBar
 from app.rag import llm
 from app.repositories import chunks as chunk_repository
 from app.repositories import companies as company_repository
-from app.repositories import financials as financial_repository
-from app.repositories import prices as price_repository
 from app.schemas.financials import MetricName
-from app.services.financials import METRICS
-from tests.conftest import CHAT_CHUNK_DATA
+from tests.conftest import CHAT_CHUNK_DATA, add_bars, add_facts
 
 CONTEXT = {"org_id": 1, "user_id": 2}
 OUT_OF_SCOPE = "Ticker MSFT is not available. Available tickers: AAPL, NVDA"
@@ -62,88 +58,6 @@ def tool_environment(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-test-not-real")
     # Alembic's fileConfig (run when the test database is created) can disable existing loggers
     logging.getLogger("app.agent.tools").disabled = False
-
-
-@pytest.fixture
-def companies(db: Session) -> dict[str, Company]:
-    result = {}
-    for ticker, cik in (
-        ("AAPL", "0000320193"),
-        ("NVDA", "0001045810"),
-        ("MSFT", "0000789019"),
-    ):
-        # chat_chunks may have created AAPL and NVDA already
-        result[ticker] = company_repository.get_by_ticker(db, ticker) or company_repository.create(
-            db, ticker, cik, f"{ticker} Inc.", None
-        )
-    return result
-
-
-def add_facts(
-    db: Session, company: Company, metric: str, values: dict[int, float], month: int, day: int
-) -> None:
-    # One annual fact per fiscal year; the period ends on month/day of that year
-    _label, unit, concepts = METRICS[MetricName(metric)]
-    for fiscal_year, value in values.items():
-        period_end = date(fiscal_year, month, day)
-        financial_repository.create(
-            db,
-            company.id,
-            concepts[0],
-            unit,
-            None,
-            period_end,
-            Decimal(str(value)),
-            fiscal_year,
-            "10-K",
-            f"{company.ticker}-{fiscal_year}",
-            period_end,
-        )
-
-
-def add_bars(db: Session, company: Company, closes: list[float]) -> None:
-    # Consecutive calendar days, the last close yesterday; volume is 1000 + the position
-    for position, close in enumerate(closes):
-        price = Decimal(str(close))
-        price_repository.create(
-            db,
-            company.id,
-            TODAY - timedelta(days=len(closes) - position),
-            price,
-            price,
-            price,
-            price,
-            price,
-            1000 + position,
-        )
-
-
-@pytest.fixture
-def market(db: Session, companies: dict[str, Company]) -> dict[str, Company]:
-    # Hand-picked numbers (so every derived value can be computed by hand). AAPL: fiscal years
-    # 2022 to 2024 ending late September; NVDA: 2023 to 2025 ending late January, with NEGATIVE
-    # equity in 2024 and no gross profit at all
-    aapl = companies["AAPL"]
-    nvda = companies["NVDA"]
-    aapl_values = {
-        "revenue": {2022: 100, 2023: 120, 2024: 150},
-        "net_income": {2022: 20, 2023: 30, 2024: 45},
-        "operating_income": {2022: 25, 2023: 36, 2024: 60},
-        "gross_profit": {2022: 40, 2023: 60, 2024: 75},
-        "shareholders_equity": {2022: 200, 2023: 150, 2024: 300},
-        "total_liabilities": {2022: 100, 2023: 150, 2024: 600},
-    }
-    for metric, values in aapl_values.items():
-        add_facts(db, aapl, metric, values, 9, 28)
-    nvda_values = {
-        "revenue": {2023: 50, 2024: 100, 2025: 300},
-        "net_income": {2023: 10, 2024: 50, 2025: 150},
-        "shareholders_equity": {2023: 20, 2024: -10, 2025: 100},
-        "total_liabilities": {2023: 40, 2024: 60, 2025: 100},
-    }
-    for metric, values in nvda_values.items():
-        add_facts(db, nvda, metric, values, 1, 26)
-    return companies
 
 
 def run(tool, args: dict, **context) -> object:

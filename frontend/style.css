@@ -455,6 +455,40 @@ th.number {
   font-weight: 700;
 }
 
+.steps-toggle {
+  align-self: flex-start;
+  margin-top: -6px;
+}
+
+.steps {
+  margin: -6px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fafbfc;
+}
+
+.steps ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.steps li {
+  margin-bottom: 8px;
+}
+
+.steps pre {
+  margin: 4px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.steps .step-output {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 button.cite {
   padding: 0 4px;
   background: var(--surface);

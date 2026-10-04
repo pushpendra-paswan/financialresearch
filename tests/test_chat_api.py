@@ -133,7 +133,7 @@ def test_viewer_asks_and_gets_a_stream_then_reads_the_stored_conversation(
     assert set(body) == {"id", "title", "created_at", "updated_at", "messages"}
     assert body["title"] == EXPORT_QUESTION
     user_message, assistant_message = body["messages"]
-    assert set(user_message) == {"id", "role", "content", "created_at", "citations"}
+    assert set(user_message) == {"id", "role", "content", "created_at", "citations", "run_id"}
     assert (user_message["role"], user_message["citations"]) == ("user", [])
     assert assistant_message["content"] == answer
     assert assistant_message["id"] == events[-1]["message_id"]

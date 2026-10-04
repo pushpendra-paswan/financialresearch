@@ -1,7 +1,12 @@
+import json
 import os
+import threading
 from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -9,7 +14,10 @@ import openai
 import pytest
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.outputs import ChatGenerationChunk
+from langchain_core.runnables import RunnableLambda
+from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -54,18 +62,25 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 
 from alembic import command
+from app.agent import run as agent_run
+from app.agent import tools as agent_tools
 from app.clients import sec
 from app.config import settings
 from app.database import engine
 from app.dependencies import get_db
 from app.main import app
 from app.models.chunks import DocumentChunk
+from app.models.companies import Company
 from app.rag import llm
 from app.redis_client import redis_client
 from app.repositories import chunks as chunk_repository
 from app.repositories import companies as company_repository
 from app.repositories import filings as filing_repository
+from app.repositories import financials as financial_repository
+from app.repositories import prices as price_repository
+from app.schemas.financials import MetricName
 from app.services import companies as company_service
+from app.services.financials import METRICS
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -126,34 +141,90 @@ def fake_embeddings(monkeypatch: pytest.MonkeyPatch) -> SpyEmbeddings:
 
 
 class ScriptedChatModel(GenericFakeChatModel):
-    # A fake chat model that answers with the scripted texts, one per call, in order (an extra
+    # A fake chat model that answers with the scripted messages, one per call, in order (an extra
     # call raises StopIteration). It records the messages of every call in `received`, can fail
     # in the middle of a stream like an OpenAI error, and with forbidden=True it fails the test
-    # as soon as it is called
+    # as soon as it is called.
+    # Since 3.2 it also works for the agent: scripted AIMessages may have tool_calls (the stock
+    # fake DROPS tool_calls when it streams, and LangGraph's messages mode makes a model stream
+    # even inside .invoke()), bind_tools records the tool names, and with_structured_output (the
+    # router) pops the next item of `structured`
     received: list[list] = Field(default_factory=list)
     forbidden: bool = False
     fail_after_pieces: int | None = None
     fail_on_call: bool = False
+    structured: list = Field(default_factory=list)
+    bound_tools: list[str] = Field(default_factory=list)
+    last_message: Any = None
 
-    def _generate(self, messages, *args, **kwargs):
+    def _check_callable(self) -> None:
         if self.forbidden:
             raise AssertionError("The chat model was called, but this test expects no call")
         if self.fail_on_call:
             request = httpx.Request("POST", "https://example.invalid/chat/completions")
             raise openai.APIConnectionError(request=request)
+
+    def _generate(self, messages, *args, **kwargs):
+        self._check_callable()
         self.received.append(messages)
-        return super()._generate(messages, *args, **kwargs)
+        result = super()._generate(messages, *args, **kwargs)
+        self.last_message = result.generations[0].message
+        return result
 
     def _stream(self, *args, **kwargs):
+        count = 0
         for index, chunk in enumerate(super()._stream(*args, **kwargs)):
             if self.fail_after_pieces is not None and index >= self.fail_after_pieces:
                 request = httpx.Request("POST", "https://example.invalid/chat/completions")
                 raise openai.APIConnectionError(request=request)
+            count += 1
             yield chunk
+        # The tool calls of the scripted message, as the tool_call_chunks a real model streams
+        for index, call in enumerate(self.last_message.tool_calls):
+            args_json = json.dumps(call["args"])
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(
+                    content="",
+                    id=self.last_message.id,
+                    tool_call_chunks=[
+                        {
+                            "name": call["name"],
+                            "args": args_json,
+                            "id": call["id"],
+                            "index": index,
+                            "type": "tool_call_chunk",
+                        }
+                    ],
+                )
+            )
+
+    def bind_tools(self, tools, **kwargs):
+        # Shares this object (and so `received`) with the code that uses the unbound model
+        self.bound_tools = [tool.name for tool in tools]
+        return self
+
+    def with_structured_output(self, schema, **kwargs):
+        def decide(prompt_value):
+            self._check_callable()
+            self.received.append(prompt_value.to_messages())
+            return self.structured.pop(0)
+
+        return RunnableLambda(decide)
 
     def prompt_text(self, call_index: int) -> str:
         # All messages of one call as one string, for assertions on what the model was given
         return "\n".join(str(message.content) for message in self.received[call_index])
+
+
+def tool_calls_message(*calls: tuple[str, dict]) -> AIMessage:
+    # A scripted model answer that asks for tools: tool_calls_message(("get_price_history", {...}))
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {"name": name, "args": args, "id": f"call_{index}_{name}", "type": "tool_call"}
+            for index, (name, args) in enumerate(calls)
+        ],
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -180,11 +251,20 @@ def no_reranker(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def script_chat(monkeypatch: pytest.MonkeyPatch) -> Callable[..., ScriptedChatModel]:
     # script_chat("answer 1", "answer 2") installs a model that gives these texts to the first and
-    # second call. fail_after_pieces=N makes a stream fail after N pieces
-    def install(*texts: str, fail_after_pieces: int | None = None) -> ScriptedChatModel:
+    # second call. An item can also be an AIMessage (with tool_calls, see tool_calls_message).
+    # fail_after_pieces=N makes a stream fail after N pieces; structured=[...] are the answers of
+    # with_structured_output (the router)
+    def install(
+        *items: str | AIMessage,
+        fail_after_pieces: int | None = None,
+        structured: list | None = None,
+    ) -> ScriptedChatModel:
         model = ScriptedChatModel(
-            messages=iter([AIMessage(content=text) for text in texts]),
+            messages=iter(
+                [AIMessage(content=item) if isinstance(item, str) else item for item in items]
+            ),
             fail_after_pieces=fail_after_pieces,
+            structured=list(structured or []),
         )
         monkeypatch.setattr(llm, "get_chat_model", lambda: model)
         return model
@@ -388,3 +468,110 @@ def chat_chunks(db: Session) -> dict[str, DocumentChunk]:
         )
     chunk_repository.create_many(db, list(rows.values()))
     return rows
+
+
+# --- The 3.1 / 3.2 market data (moved here from test_agent_tools.py, used by the agent tests) ---
+@pytest.fixture
+def companies(db: Session) -> dict[str, Company]:
+    result = {}
+    for ticker, cik in (
+        ("AAPL", "0000320193"),
+        ("NVDA", "0001045810"),
+        ("MSFT", "0000789019"),
+    ):
+        # chat_chunks may have created AAPL and NVDA already
+        result[ticker] = company_repository.get_by_ticker(db, ticker) or company_repository.create(
+            db, ticker, cik, f"{ticker} Inc.", None
+        )
+    return result
+
+
+def add_facts(
+    db: Session, company: Company, metric: str, values: dict[int, float], month: int, day: int
+) -> None:
+    # One annual fact per fiscal year; the period ends on month/day of that year
+    _label, unit, concepts = METRICS[MetricName(metric)]
+    for fiscal_year, value in values.items():
+        period_end = date(fiscal_year, month, day)
+        financial_repository.create(
+            db,
+            company.id,
+            concepts[0],
+            unit,
+            None,
+            period_end,
+            Decimal(str(value)),
+            fiscal_year,
+            "10-K",
+            f"{company.ticker}-{fiscal_year}",
+            period_end,
+        )
+
+
+def add_bars(db: Session, company: Company, closes: list[float]) -> None:
+    # Consecutive calendar days, the last close yesterday; volume is 1000 + the position
+    for position, close in enumerate(closes):
+        price = Decimal(str(close))
+        price_repository.create(
+            db,
+            company.id,
+            date.today() - timedelta(days=len(closes) - position),
+            price,
+            price,
+            price,
+            price,
+            price,
+            1000 + position,
+        )
+
+
+@pytest.fixture
+def market(db: Session, companies: dict[str, Company]) -> dict[str, Company]:
+    # Hand-picked numbers (so every derived value can be computed by hand). AAPL: fiscal years
+    # 2022 to 2024 ending late September; NVDA: 2023 to 2025 ending late January, with NEGATIVE
+    # equity in 2024 and no gross profit at all
+    aapl = companies["AAPL"]
+    nvda = companies["NVDA"]
+    aapl_values = {
+        "revenue": {2022: 100, 2023: 120, 2024: 150},
+        "net_income": {2022: 20, 2023: 30, 2024: 45},
+        "operating_income": {2022: 25, 2023: 36, 2024: 60},
+        "gross_profit": {2022: 40, 2023: 60, 2024: 75},
+        "shareholders_equity": {2022: 200, 2023: 150, 2024: 300},
+        "total_liabilities": {2022: 100, 2023: 150, 2024: 600},
+    }
+    for metric, values in aapl_values.items():
+        add_facts(db, aapl, metric, values, 9, 28)
+    nvda_values = {
+        "revenue": {2023: 50, 2024: 100, 2025: 300},
+        "net_income": {2023: 10, 2024: 50, 2025: 150},
+        "shareholders_equity": {2023: 20, 2024: -10, 2025: 100},
+        "total_liabilities": {2023: 40, 2024: 60, 2025: 100},
+    }
+    for metric, values in nvda_values.items():
+        add_facts(db, nvda, metric, values, 1, 26)
+    return companies
+
+
+@pytest.fixture
+def agent_environment(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The agent opens its own short sessions (the tools and the run). Give them all the test
+    # session and never close it, so the rollback isolation is kept. ToolNode runs tool calls in
+    # threads and a Session is not thread-safe: the lock makes the tool bodies run one at a time.
+    # The checkpointer is an in-memory saver. A (fake) key enables the tools and the agent
+    lock = threading.RLock()
+
+    @contextmanager
+    def shared_session():
+        with lock:
+            yield db
+
+    monkeypatch.setattr(agent_tools, "SessionLocal", shared_session)
+    monkeypatch.setattr(agent_run, "SessionLocal", shared_session)
+
+    @contextmanager
+    def in_memory_checkpointer():
+        yield InMemorySaver()
+
+    monkeypatch.setattr(agent_run, "open_checkpointer", in_memory_checkpointer)
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-test-not-real")

@@ -153,6 +153,43 @@ def test_chat_page_has_the_advice_notice_in_the_page_and_uses_api_stream() -> No
     assert '["chat.html", "Research chat"]' in nav
 
 
+def test_chat_page_has_the_mode_select_with_auto_first_and_sends_the_mode() -> None:
+    html = (FRONTEND_DIR / "chat.html").read_text()
+    select = html[
+        html.index('<select id="ask-mode">') : html.index("</select>", html.index('id="ask-mode"'))
+    ]
+    options = re.findall(r'<option value="(\w+)">([^<]+)</option>', select)
+    assert options == [("auto", "Auto"), ("rag", "Filings only"), ("agent", "Research agent")]
+    assert "selected" not in select  # Auto is the default because it is the first option
+    script = (FRONTEND_DIR / "chat.js").read_text()
+    assert "mode: askMode.value" in script
+    # The mode select is disabled while the answer streams, like the other controls
+    assert "askMode.disabled = true" in script and "askMode.disabled = false" in script
+
+
+def test_chat_page_shows_the_agent_steps_and_ignores_unknown_events() -> None:
+    script = (FRONTEND_DIR / "chat.js").read_text()
+    # The new stream events update the status line
+    for event_type in ("route", "step", "step_result"):
+        assert f'streamEvent.type === "{event_type}"' in script
+    assert "Routing: " in script
+    # No branch fails on an unknown event type: the chain of known types has no final else
+    start = script.index("function (streamEvent)")
+    handler = script[start : script.index("if (!finished && failure === null)", start)]
+    assert "} else {" not in handler
+    # The trace comes from GET /agent/runs/{id} through api(), shown with textContent only
+    assert '"/agent/runs/"' in script
+    assert '"Steps ("' in script
+    assert "<details" not in script and "<summary" not in script  # built with el(), not markup
+    assert 'el("details"' in script and 'el("summary"' in script
+    for status_word in ("run_id", "run.status"):
+        assert status_word in script
+    # The advice notice stays in the page next to the controls
+    html = (FRONTEND_DIR / "chat.html").read_text()
+    main_part = html[html.index("<main>") : html.index("</main>")]
+    assert 'id="advice-notice"' in main_part and "Not investment advice" in main_part
+
+
 @pytest.mark.parametrize("path", js_files, ids=lambda path: path.name)
 def test_js_imports_only_common_js(path: Path) -> None:
     text = path.read_text()
