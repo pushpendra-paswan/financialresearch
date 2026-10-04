@@ -126,6 +126,8 @@ def ask(
     session_id: int,
     question: str,
     ticker: str | None,
+    mode: str = "rag",
+    trace_tags: list[str] | None = None,
 ) -> Iterator[dict]:
     # 1. Load the session with org_id AND user_id: a missing session, a colleague's session and
     # another organization's session all give the same 404
@@ -155,7 +157,14 @@ def ask(
                     for message in history
                 )
                 rewritten = (REWRITE_PROMPT | model).invoke(
-                    {"history": history_text, "question": question}
+                    {"history": history_text, "question": question},
+                    config=llm.get_trace_config(
+                        "rag_chat",
+                        user_id,
+                        session_id,
+                        ["rag", f"mode:{mode}", "step:rewrite", *(trace_tags or [])],
+                    )
+                    or None,
                 )
                 rewritten_question = rewritten.text.strip() or None
                 if rewritten_question:
@@ -187,7 +196,14 @@ def ask(
                 answer_text = ""
                 answer_model = settings.CHAT_MODEL
                 for piece in (QA_PROMPT | model).stream(
-                    {"excerpts": excerpts, "question": standalone_question}
+                    {"excerpts": excerpts, "question": standalone_question},
+                    config=llm.get_trace_config(
+                        "rag_chat",
+                        user_id,
+                        session_id,
+                        ["rag", f"mode:{mode}", "step:answer", *(trace_tags or [])],
+                    )
+                    or None,
                 ):
                     if piece.text:
                         answer_text += piece.text

@@ -31,7 +31,7 @@ from app.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.models.agent import AgentRun, AgentRunStatus
 from app.models.alerts import Alert
 from app.models.reports import Report
-from app.rag import chat
+from app.rag import chat, llm
 from app.repositories import agent as agent_repository
 from app.repositories import chat as chat_repository
 from app.repositories import reports as report_repository
@@ -255,3 +255,5 @@ try:
         print(f"\nSession {chat_session.id} deleted")
 finally:
     db.close()
+    # The tracer uploads in the background: wait for it (a no-op when tracing is off)
+    llm.flush_traces()

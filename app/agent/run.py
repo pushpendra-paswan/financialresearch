@@ -68,8 +68,9 @@ class RouteDecision(BaseModel):
 
 # Chooses between the simple filings chat (2.4) and the agent with one structured-output call. A
 # failure falls back to "rag", the cheaper path, so a router problem never blocks a question.
-# Used by ask_question and by scripts/try_agent.py --route-samples
-def route_question(question: str, history: list) -> str:
+# Used by ask_question and by scripts/try_agent.py --route-samples. trace_config is the fragment
+# from llm.get_trace_config (empty or None: not traced)
+def route_question(question: str, history: list, trace_config: dict | None = None) -> str:
     history_text = (
         "\n".join(
             f"{'User' if message.role == 'user' else 'Assistant'}: {message.content}"
@@ -79,7 +80,9 @@ def route_question(question: str, history: list) -> str:
     )
     chain = ROUTER_PROMPT | llm.get_chat_model().with_structured_output(RouteDecision)
     try:
-        decision = chain.invoke({"history": history_text, "question": question})
+        decision = chain.invoke(
+            {"history": history_text, "question": question}, config=trace_config or None
+        )
     except (openai.OpenAIError, OutputParserException) as exc:
         # Only the class name: an OpenAI error message can contain part of the key
         logger.warning("router failed, falling back to rag: %s", type(exc).__name__)
@@ -523,9 +526,14 @@ def ask_question(
     question: str,
     ticker: str | None,
     mode: str,
+    trace_tags: list[str] | None = None,
 ) -> Iterator[dict]:
+    # trace_tags are extra tags for the traces of this question (the evaluation adds its own)
+    extra_tags = trace_tags or []
     if mode == "rag":
-        return rag_chat.ask(db, org_id, user_id, session_id, question, ticker)
+        return rag_chat.ask(
+            db, org_id, user_id, session_id, question, ticker, mode=mode, trace_tags=extra_tags
+        )
 
     # 1. Eager checks. A missing session, a colleague's and another organization's give one 404
     chat_session = chat_repository.get_session(db, org_id, user_id, session_id)
@@ -561,11 +569,23 @@ def ask_question(
         # 3. The route. "auto" asks the router once; "agent" skips it
         route = "agent"
         if mode == "auto":
-            route = route_question(question, history)
+            router_trace = llm.get_trace_config(
+                "agent_router", user_id, session_id, ["router", f"mode:{mode}", *extra_tags]
+            )
+            route = route_question(question, history, router_trace)
         yield {"type": "route", "route": route, "mode": mode}
         if route == "rag":
             try:
-                yield from rag_chat.ask(db, org_id, user_id, session_id, question, ticker)
+                yield from rag_chat.ask(
+                    db,
+                    org_id,
+                    user_id,
+                    session_id,
+                    question,
+                    ticker,
+                    mode=mode,
+                    trace_tags=extra_tags,
+                )
             except (NotFoundError, ServiceUnavailableError) as exc:
                 # The session or the key vanished after the checks above
                 logger.error("chat failed after the route: %s", type(exc).__name__)
@@ -598,7 +618,13 @@ def ask_question(
                 "thread_id": str(run_id),
                 "today": date.today().isoformat(),
                 "focus": focus,
-            }
+            },
+            **llm.get_trace_config(
+                "agent_run",
+                user_id,
+                session_id,
+                ["agent", f"mode:{mode}", f"run:{run_id}", *extra_tags],
+            ),
         }
         yield from stream_run(org_id, user_id, session_id, run_id, config, messages, None)
 
@@ -610,7 +636,13 @@ def ask_question(
 # and only then does the returned generator resume the graph. Nothing executes without a recorded
 # approval: the write tool acts only when the graph is resumed with exactly "approve"
 def decide_run(
-    db: Session, org_id: int, user_id: int, run_id: int, tool_call_id: int, decision: str
+    db: Session,
+    org_id: int,
+    user_id: int,
+    run_id: int,
+    tool_call_id: int,
+    decision: str,
+    trace_tags: list[str] | None = None,
 ) -> Iterator[dict]:
     # 1. The run through the scoped query: a missing run, a colleague's and another organization's
     # give the same 404. Only the owner can decide
@@ -710,7 +742,15 @@ def decide_run(
             "thread_id": str(run_id),
             "today": date.today().isoformat(),
             "focus": focus,
-        }
+        },
+        # The resumed part is its own trace (a second graph invocation). The run tag and the chat
+        # thread tie it to the first part. The mode is not stored, so there is no mode tag
+        **llm.get_trace_config(
+            "agent_run_resumed",
+            user_id,
+            session_id,
+            ["agent", "resumed", f"run:{run_id}", *(trace_tags or [])],
+        ),
     }
 
     return stream_run(

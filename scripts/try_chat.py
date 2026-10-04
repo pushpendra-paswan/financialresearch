@@ -11,7 +11,7 @@ import sys
 from app.config import settings
 from app.database import SessionLocal
 from app.exceptions import NotFoundError, ServiceUnavailableError
-from app.rag import chat
+from app.rag import chat, llm
 from app.repositories import chat as chat_repository
 from app.repositories import users as user_repository
 
@@ -95,3 +95,5 @@ try:
         print(f"\nSession {chat_session.id} deleted")
 finally:
     db.close()
+    # The tracer uploads in the background: wait for it (a no-op when tracing is off)
+    llm.flush_traces()

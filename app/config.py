@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     RERANK_CANDIDATES_K: int = 20
     RERANK_TIMEOUT_SECONDS: int = 10
 
+    # Tracing (3.5): LangSmith, hosted. An empty LANGSMITH_API_KEY means tracing is off (never
+    # logged). LANGSMITH_ENDPOINT is empty for the SDK default (US); the EU one is
+    # https://eu.api.smith.langchain.com. Global tracing (LANGSMITH_TRACING) stays unset: only
+    # calls that receive llm.get_trace_config are traced
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "fin-copilot"
+    LANGSMITH_ENDPOINT: str = ""
+
     # Rate limits: requests per 60-second window. Login/register are counted per client IP,
     # every other protected route per authenticated user
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10

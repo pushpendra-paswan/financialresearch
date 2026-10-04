@@ -264,6 +264,24 @@ def no_reranker(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(llm, "get_reranker", forbidden_reranker)
 
 
+@pytest.fixture(autouse=True)
+def no_tracing(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No test may ever reach LangSmith, and the developer's real LANGSMITH_API_KEY (from .env) or a
+    # tracing variable in their shell must not switch tracing on in unrelated tests: the key is
+    # emptied, every LangSmith / LangChain tracing variable is removed, and building the real
+    # client FAILS the test. Tracing tests install a fake client (tests/test_tracing.py)
+    def forbidden_client() -> None:
+        # pytest.fail (not an assertion): it is not an Exception, so the fail-open handler of
+        # get_trace_config cannot swallow it
+        pytest.fail("The LangSmith client was built, but this test expects no tracing")
+
+    monkeypatch.setattr(settings, "LANGSMITH_API_KEY", "")
+    for name in list(os.environ):
+        if name.startswith(("LANGSMITH_", "LANGCHAIN_")):
+            monkeypatch.delenv(name)
+    monkeypatch.setattr(llm, "get_langsmith_client", forbidden_client)
+
+
 @pytest.fixture
 def script_chat(monkeypatch: pytest.MonkeyPatch) -> Callable[..., ScriptedChatModel]:
     # script_chat("answer 1", "answer 2") installs a model that gives these texts to the first and

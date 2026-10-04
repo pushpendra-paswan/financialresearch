@@ -36,7 +36,7 @@ This is a learning and portfolio project. The developer must be able to read and
 - LangGraph (`langgraph` 1.2.12) for the agent (Phase 3): `StateGraph`, `ToolNode`, checkpointers and `interrupt`/`Command` are used instead of custom agent code (section 6). Added in 3.1; it brings `langgraph-checkpoint`, `langgraph-prebuilt`, `langgraph-sdk` and `ormsgpack`, and lowers `websockets` from 17.x to 16.x (`langgraph-sdk` needs `<17`); `langchain-core` is unchanged. `langgraph-checkpoint-postgres` 3.1.2 (added in 3.2) is the Postgres checkpointer (`PostgresSaver`); it brings `psycopg-pool`, and `langchain-core`, `langgraph` and `psycopg` stay as they were.
 - yfinance for daily prices (the first `PriceProvider` implementation; an unofficial Yahoo Finance wrapper, fine for a personal learning project, not for commercial use)
 - Embeddings: OpenAI `text-embedding-3-small` (1536 dimensions) through LangChain's `OpenAIEmbeddings`. Chat model: OpenAI `gpt-5.4-mini` (used from 2.4). Reranker: Cohere through `langchain-cohere` (`CohereRerank`), default model `rerank-v4.0-fast` (chosen in 2.5, numbers in `evals/results.md`; `cohere` is also pinned because `app/rag/llm.py` builds the client with a timeout and `app/rag/retrieval.py` imports its `ApiError`)
-- Langfuse for LLM tracing (Phase 3)
+- LangSmith for LLM tracing (Phase 3, 3.5): the hosted service on the free Developer plan (5,000 traces a month, 14-day retention), through the `langsmith` package (pinned; the SDK `langchain-core` already uses), replacing the Langfuse that earlier versions of this file named. Why: self-hosting LangSmith needs the Enterprise plan, so the choice trades local data for no extra service in Docker Compose. Section 6 (Observability) defines how it must be used
 - pytest, ruff
 - Docker Compose for local development
 - Frontend: plain HTML, CSS and JavaScript (ES modules) served by FastAPI under /app; no framework, no build step, no external hosts.
@@ -139,7 +139,7 @@ fin-copilot/
 │   ├── workers/           # Celery app, tasks and beat schedule
 │   └── agent/             # Phase 3 only: tools.py (3.1), graph.py and run.py (3.2; the prompts are module-level constants there, like in chat.py), write_tools.py (3.3; 3.4: both write tools, `create_alert` and `save_report`)
 ├── scripts/               # One-off commands: seed companies, backfill prices
-├── evals/                 # Phase 2/3 evaluation questions, scripts and results
+├── evals/                 # Phase 2/3 evaluation questions, scripts and results: questions.json, run_eval.py, results.md (2.5); agent_tasks.json, run_agent_eval.py, agent_results.md, runs/agent_*.json (3.5)
 ├── frontend/              # Plain HTML, CSS, JS (ES modules), served at /app
 │   ├── style.css          # The one stylesheet
 │   ├── common.js          # Shared code: api(), apiStream(), token access, nav, pager, el(), showMessage()
@@ -252,7 +252,7 @@ Use LangChain for:
 - `RecursiveCharacterTextSplitter` for chunking, applied inside each section (never across section boundaries).
 - The embeddings interface (`embed_documents`, `embed_query`), so changing the embedding provider is a config change.
 - The standard chat model interface, `ChatPromptTemplate` for prompts, and simple LCEL pipes (`prompt | model`) called with `.invoke()` or `.stream()`.
-- Callbacks for tracing, when added.
+- Callbacks for tracing: only the explicit LangSmith tracer that `llm.get_trace_config` builds (Observability, below).
 
 Do not use:
 - Legacy chains (`RetrievalQA`, `ConversationalRetrievalChain` and similar) or anything from `langchain-classic`.
@@ -279,6 +279,14 @@ Also:
 - The checkpointer is the Postgres one (`PostgresSaver`), thread id = the agent run id, opened once per run. The library's checkpoint tables are created by an Alembic migration that calls the library's own `setup()` (inside `autocommit_block()`, because it creates indexes CONCURRENTLY), never at runtime; `alembic/env.py` has an `include_object` filter so autogenerate leaves them alone.
 
 ---
+
+### Observability (3.5)
+- Tracing goes to LangSmith (hosted). It is EXPLICIT per call site: a call is traced only when it receives the config fragment that `llm.get_trace_config(name, user_id, session_id, tags, metadata)` returns (`callbacks` with one `LangChainTracer` built on the one cached `Client`, `run_name`, `tags`, `metadata`), merged into the config the caller already passes to `.invoke()`, `.stream()` or `graph.stream()`. Trace names: `agent_run`, `agent_run_resumed`, `agent_router`, `rag_chat`.
+- Global tracing stays OFF everywhere (shell, `.env`, containers, tests): `LANGSMITH_TRACING` and `LANGCHAIN_TRACING_V2` are never set, so embeddings, ingestion, scripts and tests that get no fragment are never traced. No `@traceable` spans, no LangSmith datasets, `evaluate()`, prompt hub or feedback pushing.
+- Tracing is optional and FAILS OPEN: an empty `LANGSMITH_API_KEY` means off (`get_trace_config` returns `{}`); building the tracer, uploading, a bad key, a rate limit or an outage must never break, slow or fail a request, a run or a test (the client has short timeouts and no retries, upload errors are logged by class name only through `tracing_error_callback`, and the library's own logger is silenced because it prints a partly masked key). `llm.flush_traces()` (bounded) is for short scripts.
+- Metadata and tags carry numeric ids only (`user_id` as a string, `thread_id` = `chat-<session id>`, `run:<agent run id>`) and fixed words (`agent`, `rag`, `router`, `mode:<mode>`, `resumed`, `step:rewrite|answer`, `eval:<run name>`, `eval_task:<id>`). Never an email, a key or question text. LangChain also copies the scalar `configurable` keys (`org_id`, `today`, `focus`) into the metadata.
+- Traces leave the machine: questions, filing excerpts, tool outputs and report text are sent to LangSmith's servers. Acceptable for this development project (public SEC data, test organizations); there is no redaction.
+- Tests never reach LangSmith: an autouse fixture empties the key, removes every `LANGSMITH_*` / `LANGCHAIN_*` variable and fails any test that builds the real client; tracing tests use a fake tracer and a fake client.
 
 ## 7. Milestones
 
@@ -348,8 +356,8 @@ Work on exactly one milestone at a time. Each milestone is finished only when it
   Done when: the agent cannot create an alert without user approval.
 - **3.4 Reports**: the second write tool, `save_report(title, content, tickers)` in `app/agent/write_tools.py`, reuses the 3.3 approval mechanism unchanged (interrupt, decision endpoint, compare-and-set, expiry, audit); `reports`, `report_companies` and `report_citations` tables (section 5); `GET /reports`, `GET /reports/{id}` (every role) and `DELETE /reports/{id}` (editors) under the organization rules of section 6; the report is Markdown in a restricted subset (`#`/`##`/`###` headings, paragraphs, `- ` bullets, pipe tables, `**bold**`, the markers `[n]`) that the report page renders into elements with `textContent` only; pages `reports.html` (the list) and `report.html?id=` (the report with clickable citations, the data used and, for editors, Delete); the chat page's approval card shows long arguments (the report text) in a collapsible block and an approved report gets an "Open report" link.
   Done when: a research request produces a saved, cited report linked to its companies.
-- **3.5 Tracing and agent evaluation**: Langfuse tracing, 10–15 agent test tasks checking tool choice and groundedness.
-  Done when: every run has a viewable trace and the agent eval script produces a results table.
+- **3.5 Tracing and agent evaluation**: (1) LangSmith tracing as defined in Observability: an agent run (graph, nested model calls with token usage, tool runs with inputs and outputs), its resumed part, the router and the RAG chat appear as traces, grouped into a thread per chat session and tagged with the agent run id. (2) An agent evaluation of 15 tasks in `evals/agent_tasks.json`, run by `python -m evals.run_agent_eval --name <run name> [--rerank] [--limit N] [--only TASK_ID] [--validate-only]` through the real path (`ask_question`, `decide_run`) as throwaway users of an "Agent Eval" organization, everything cleaned up afterwards, reranking off by default. Each task has deterministic checks of the stored run (status, tools required / any / forbidden, tool arguments, step count, citations, errored tools, `period_end` dates, text the answer must contain, rows written) and, where there is an answer, a judge (the same model as the agent, a known bias) that must quote the tool output for every claim it calls supported; the script verifies the quote. INVARIANT: after every task no alert or report exists unless the task is `writes: created` (and then an APPROVED write call exists); a violation is a hard failure that stops the whole evaluation, is printed first and exits non-zero. Results: `evals/runs/agent_<name>.json` and `evals/agent_results.md`. The agent is not tuned in 3.5.
+  Done when: a trace of a full agent run is visible in the tracing UI, and the agent eval script produces a results table with the invariant held (0 writes without approval).
 
 ---
 
