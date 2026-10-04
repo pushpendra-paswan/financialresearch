@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports - Financial Research Copilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="nav"></header>
+  <main>
+    <h1>Reports</h1>
+    <p class="notice">Reports are written by the research agent. Not investment advice.</p>
+    <div id="message" aria-live="polite"></div>
+    <div id="reports-list"></div>
+    <div id="reports-pager" class="pager"></div>
+  </main>
+  <footer>Data from SEC EDGAR and Yahoo Finance. For research only, not investment advice.</footer>
+  <script type="module" src="reports.js"></script>
+</body>
+</html>

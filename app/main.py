@@ -28,6 +28,7 @@ from app.routes import (
     health,
     notifications,
     prices,
+    reports,
     users,
     watchlists,
 )
@@ -55,6 +56,7 @@ app.include_router(filings.router, dependencies=limited)
 app.include_router(financials.router, dependencies=limited)
 app.include_router(notifications.router, dependencies=limited)
 app.include_router(prices.router, dependencies=limited)
+app.include_router(reports.router, dependencies=limited)
 app.include_router(users.router, dependencies=limited)
 app.include_router(watchlists.router, dependencies=limited)
 

@@ -12,6 +12,8 @@
 # A run that PAUSES for the user's approval (a write tool such as create_alert) prints "waiting for
 # approval: run <id>, call <id>: <summary>", keeps its session and checkpoint, and the script exits
 # normally, so a SECOND process can decide it with --resume <run id> --decision approve|reject
+# (3.4: after a run that saved a report it also prints the stored report: id, title, companies,
+# number of citations and data sources)
 # (it finds the pending call itself, prints the stream and the stored result, and keeps the
 # session unless --cleanup is given).
 import argparse
@@ -28,9 +30,11 @@ from app.database import SessionLocal
 from app.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.models.agent import AgentRun, AgentRunStatus
 from app.models.alerts import Alert
+from app.models.reports import Report
 from app.rag import chat
 from app.repositories import agent as agent_repository
 from app.repositories import chat as chat_repository
+from app.repositories import reports as report_repository
 from app.repositories import users as user_repository
 
 # INFO for our own modules (what they decided) and for httpx (one line per real OpenAI request).
@@ -107,6 +111,8 @@ try:
         work = list(enumerate([args.question, args.follow_up], start=1))
     print(f"Session {chat_session.id} (user {user.email})")
     alerts_before = db.execute(select(func.count()).select_from(Alert)).scalar_one()
+    reports_before = db.execute(select(func.count()).select_from(Report)).scalar_one()
+    last_report_id = db.execute(select(func.max(Report.id))).scalar_one() or 0
     keep_session = args.keep or (args.resume is not None and not args.cleanup)
 
     for number, question in work:
@@ -226,6 +232,22 @@ try:
 
     alerts_after = db.execute(select(func.count()).select_from(Alert)).scalar_one()
     print(f"\nRows in alerts: {alerts_before} before, {alerts_after} after")
+    db.expire_all()
+    reports_after = db.execute(select(func.count()).select_from(Report)).scalar_one()
+    print(f"Rows in reports: {reports_before} before, {reports_after} after")
+    # The reports this process created, as the Reports page would show them
+    for new_report in db.execute(
+        select(Report).where(Report.id > last_report_id, Report.org_id == user.org_id)
+    ).scalars():
+        detail = report_repository.get_by_id(db, user.org_id, new_report.id)
+        companies = report_repository.list_companies(db, user.org_id, new_report.id)
+        citations = report_repository.list_citations(db, user.org_id, new_report.id)
+        print(
+            f"Stored report {new_report.id}: {new_report.title!r}, companies "
+            f"{[company.ticker for company in companies]}, {len(citations)} citations, "
+            f"{len(new_report.data_sources)} data sources, {len(new_report.content)} characters, "
+            f"created by {detail[1]}"
+        )
     if keep_session:
         print(f"Session {chat_session.id} kept")
     else:

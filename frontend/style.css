@@ -534,3 +534,31 @@ button.cite {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* A report: restricted Markdown rendered into elements (3.4) */
+.report {
+  overflow-wrap: anywhere;
+}
+
+.report h2,
+.report h3,
+.report h4 {
+  margin: 16px 0 6px;
+}
+
+.report p,
+.report ul {
+  margin: 6px 0;
+}
+
+.long-argument {
+  margin: 4px 0;
+}
+
+.long-argument pre {
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}

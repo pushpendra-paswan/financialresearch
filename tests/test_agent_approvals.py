@@ -652,7 +652,7 @@ def test_org_and_user_are_not_arguments_the_model_can_set() -> None:
     schema = create_alert.tool_call_schema.model_json_schema()
 
     assert sorted(schema["properties"]) == ["alert_type", "threshold", "ticker"]
-    assert [tool.name for tool in WRITE_TOOLS] == ["create_alert"]
+    assert [tool.name for tool in WRITE_TOOLS] == ["create_alert", "save_report"]
     assert create_alert.handle_tool_error is True
 
 

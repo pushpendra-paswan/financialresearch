@@ -3,7 +3,7 @@
 // server, and every [n] in a stored answer becomes a button that opens the cited passage. Answers
 // of the research agent also get a "Steps" button that shows the stored tool calls of the run, and
 // an answer whose run waits for the user's decision (a write action such as creating an alert)
-// shows an approval card with Approve and Reject.
+// shows an approval card with Approve and Reject. A saved report gets an "Open report" link.
 import { api, apiStream, el, renderNav, requireLogin, showMessage } from "./common.js";
 
 const message = document.getElementById("message");
@@ -146,12 +146,29 @@ async function loadConversation() {
       if (run && run.status === "waiting_approval" && run.pending_approval) {
         const pending = run.pending_approval;
         const card = el("div", "approval", null);
+        // Short arguments are one JSON line. A long text (a report) goes into a collapsible block
+        // that keeps its line breaks, open so the user reads what they approve
+        const shortArguments = {};
+        const longArguments = [];
+        for (const [name, value] of Object.entries(pending.args)) {
+          if (typeof value === "string" && value.length > 300) {
+            longArguments.push([name, value]);
+          } else {
+            shortArguments[name] = value;
+          }
+        }
         card.append(
           el("strong", null, pending.expired ? "Expired" : "Approval needed"),
           el("p", null, pending.summary),
-          el("pre", null, JSON.stringify(pending.args)),
-          el("p", "muted", (pending.expired ? "Expired at " : "Expires at ") + pending.expires_at)
+          el("pre", null, JSON.stringify(shortArguments))
         );
+        for (const [name, value] of longArguments) {
+          const longDetails = el("details", "long-argument");
+          longDetails.open = true;
+          longDetails.append(el("summary", null, name + " (" + value.length + " characters)"), el("pre", null, value));
+          card.append(longDetails);
+        }
+        card.append(el("p", "muted", (pending.expired ? "Expired at " : "Expires at ") + pending.expires_at));
         if (pending.expired) {
           card.append(
             el("p", "muted", "This action was not approved in time and can no longer be approved. Ask again if you still want it.")
@@ -176,6 +193,24 @@ async function loadConversation() {
 
       // The trace of the agent run: one entry per tool call, the output folded away
       if (run) {
+        // A report that was approved and saved: link to it (the stored output of save_report)
+        for (const call of run.tool_calls) {
+          if (call.tool_name !== "save_report" || call.is_error) {
+            continue;
+          }
+          let saved = null;
+          try {
+            saved = JSON.parse(call.output);
+          } catch (error) {
+            saved = null;
+          }
+          if (saved && saved.status === "created") {
+            const reportLink = el("a", null, "Open report #" + saved.report_id);
+            reportLink.setAttribute("href", "report.html?id=" + encodeURIComponent(saved.report_id));
+            conversation.append(el("p", null), reportLink);
+          }
+        }
+
         const stepsButton = el("button", "secondary steps-toggle", "Steps (" + run.tool_calls.length + ")");
         stepsButton.type = "button";
         stepsButton.setAttribute("aria-expanded", "false");
@@ -190,11 +225,26 @@ async function loadConversation() {
           const outcome = call.is_error ? "error" : "ok";
           // pending, approved, rejected or expired; calls that needed no approval show nothing
           const approval = call.approval_status === "not_required" ? "" : " \u00b7 approval " + call.approval_status;
+          // Same split as the approval card: long text arguments in a collapsed block
+          const shortInput = {};
+          const longInput = [];
+          for (const [name, value] of Object.entries(call.input)) {
+            if (typeof value === "string" && value.length > 300) {
+              longInput.push([name, value]);
+            } else {
+              shortInput[name] = value;
+            }
+          }
           entry.append(
             el("strong", null, "Step " + call.step + ": " + call.tool_name),
             " \u00b7 " + outcome + approval + " \u00b7 " + call.duration_ms + " ms",
-            el("pre", null, JSON.stringify(call.input))
+            el("pre", null, JSON.stringify(shortInput))
           );
+          for (const [name, value] of longInput) {
+            const longDetails = el("details", "long-argument");
+            longDetails.append(el("summary", null, name + " (" + value.length + " characters)"), el("pre", null, value));
+            entry.append(longDetails);
+          }
           const output = el("details", null, null);
           output.append(
             el("summary", null, "Output (" + call.output.length + " characters)"),

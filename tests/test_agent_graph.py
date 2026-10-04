@@ -79,7 +79,7 @@ def test_a_tool_call_runs_the_tool_and_the_model_answers(
     assert len(model.received) == 2
 
 
-def test_the_model_gets_the_six_tools_and_a_filled_system_prompt(
+def test_the_model_gets_all_the_tools_and_a_filled_system_prompt(
     script_chat: Callable[..., ScriptedChatModel],
 ) -> None:
     model = script_chat("Hello.")

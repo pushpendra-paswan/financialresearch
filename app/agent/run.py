@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -41,6 +40,7 @@ from app.repositories import audit as audit_repository
 from app.repositories import chat as chat_repository
 from app.repositories import chunks as chunk_repository
 from app.schemas.agent import AgentRunResponse, PendingApproval, ToolCallResponse
+from app.services import reports as report_service
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,16 @@ def add_search_similarity(search_similarity: dict[int, float], output: str) -> N
     for found in json.loads(output).get("results", []):
         similarity = max(found["similarity"], search_similarity.get(found["chunk_id"], 0.0))
         search_similarity[found["chunk_id"]] = similarity
+
+
+# String arguments longer than 200 characters (a whole report) are cut for the two STREAMED events
+# that show tool arguments (step, approval_required). The stored input, the checkpoint and
+# pending_approval.args stay complete
+def shorten_strings(args: dict) -> dict:
+    return {
+        key: value[:200] + "..." if isinstance(value, str) and len(value) > 200 else value
+        for key, value in args.items()
+    }
 
 
 # The graph loop and the close of a run, shared by a first run (messages given, decision None) and a
@@ -217,7 +227,7 @@ def stream_run(
                                         "type": "step",
                                         "step": step,
                                         "tool": call["name"],
-                                        "args": call["args"],
+                                        "args": shorten_strings(call["args"]),
                                     }
                                 # The graph is lazy: the tools node starts when the next event
                                 # is requested, so this is the start of its wall time
@@ -368,7 +378,7 @@ def stream_run(
                     "run_id": run_id,
                     "tool_call_id": pending_row.id,
                     "tool": tool_name,
-                    "args": args,
+                    "args": shorten_strings(args),
                     "summary": interrupt_payload["summary"],
                     "expires_at": (
                         pending_row.created_at + timedelta(minutes=settings.APPROVAL_TTL_MINUTES)
@@ -392,46 +402,27 @@ def stream_run(
                     # A marker [n] is a citation only when n is a chunk_id that a search_filings
                     # call of THIS run (before and after a pause) returned and that still exists.
                     # Valid ids are renumbered 1..k in order of first appearance. Other markers
-                    # stay as they are
-                    pattern = r"\[(\d+(?:\s*,\s*\d+)*)\]"
-                    mentioned = {
-                        int(id_text)
-                        for group in re.findall(pattern, final_text)
-                        for id_text in group.split(",")
-                        if int(id_text) in search_similarity
-                    }
+                    # stay as they are (the marker rules are shared with reports)
+                    mentioned = [
+                        chunk_id
+                        for chunk_id in report_service.find_marker_ids(final_text)
+                        if chunk_id in search_similarity
+                    ]
                     found_chunks = {}
                     if mentioned:
                         for chunk, chunk_ticker in chunk_repository.list_by_ids(
-                            short_db, list(mentioned)
+                            short_db, mentioned
                         ):
                             found_chunks[chunk.id] = (chunk, chunk_ticker)
 
-                    numbers = {}  # chunk_id -> new number
-                    pieces = []
-                    ignored_markers = 0
-                    position = 0
-                    for match in re.finditer(pattern, final_text):
-                        pieces.append(final_text[position : match.start()])
-                        parts = []
-                        for id_text in match.group(1).split(","):
-                            chunk_id = int(id_text)
-                            if chunk_id in found_chunks:
-                                if chunk_id not in numbers:
-                                    numbers[chunk_id] = len(numbers) + 1
-                                parts.append(str(numbers[chunk_id]))
-                            else:
-                                ignored_markers += 1
-                                parts.append(id_text.strip())
-                        pieces.append("[" + ", ".join(parts) + "]")
-                        position = match.end()
-                    pieces.append(final_text[position:])
-                    answer_text = "".join(pieces)
-                    if ignored_markers:
+                    answer_text, numbers, ignored_ids = report_service.renumber_markers(
+                        final_text, set(found_chunks)
+                    )
+                    if ignored_ids:
                         logger.info(
                             "agent run %s: %d markers are not valid chunk ids",
                             run_id,
-                            ignored_markers,
+                            len(ignored_ids),
                         )
                     cited_numbers = sorted(numbers.values())
                     for chunk_id, number in numbers.items():

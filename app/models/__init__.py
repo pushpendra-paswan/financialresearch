@@ -12,6 +12,7 @@ from app.models import (  # noqa: F401
     notifications,
     organizations,
     prices,
+    reports,
     users,
     watchlists,
 )

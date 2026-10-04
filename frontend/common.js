@@ -201,6 +201,7 @@ export async function renderNav(user, activePage) {
   const links = [
     ["companies.html", "Companies"],
     ["chat.html", "Research chat"],
+    ["reports.html", "Reports"],
     ["watchlists.html", "Watchlists"],
     ["alerts.html", "Alerts"],
     ["notifications.html", "Notifications"],
